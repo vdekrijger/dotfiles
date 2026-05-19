@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}}</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --fg-muted: #4b5563;
+  --border: #e5e7eb;
+  --card: #f9fafb;
+  --accent: #1d4ed8;
+  --critical: #dc2626;
+  --high: #ea580c;
+  --medium: #d97706;
+  --low: #16a34a;
+  --nit: #6b7280;
+  --convergent: #7c3aed;
+  --flash: #fef08a;
+  --row-hover: #f3f4f6;
+  --code-bg: #f3f4f6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --fg: #e5e7eb;
+    --fg-muted: #9ca3af;
+    --border: #1f2937;
+    --card: #151821;
+    --accent: #60a5fa;
+    --critical: #f87171;
+    --high: #fb923c;
+    --medium: #fbbf24;
+    --low: #4ade80;
+    --nit: #9ca3af;
+    --convergent: #a78bfa;
+    --flash: #78350f;
+    --row-hover: #1f2937;
+    --code-bg: #1f2937;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  margin: 0;
+  padding: 0;
+  line-height: 1.55;
+}
+.container { max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+h1 { font-size: 1.6rem; margin: 0 0 0.25rem; }
+h2 { font-size: 1.2rem; margin: 2rem 0 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.35rem; }
+h3 { font-size: 1rem; margin: 0; }
+code, .code { font-family: "SF Mono", Menlo, Monaco, Consolas, monospace; font-size: 0.88em; background: var(--code-bg); padding: 0.1rem 0.35rem; border-radius: 3px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+  font-size: 0.9rem;
+  background: var(--card);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  margin-bottom: 1.25rem;
+}
+.meta-grid dt { color: var(--fg-muted); }
+.meta-grid dd { margin: 0; }
+
+.verdict-banner {
+  padding: 0.85rem 1rem;
+  border-radius: 6px;
+  border-left: 4px solid var(--high);
+  background: var(--card);
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+.verdict-banner.grade-a, .verdict-banner.grade-a-minus { border-left-color: var(--low); }
+.verdict-banner.grade-b-plus, .verdict-banner.grade-b { border-left-color: var(--medium); }
+.verdict-banner.grade-c-plus, .verdict-banner.grade-c { border-left-color: var(--high); }
+.verdict-banner.grade-f { border-left-color: var(--critical); }
+.verdict-banner strong { font-weight: 600; }
+
+.progress-wrap {
+  margin-bottom: 1.5rem;
+  background: var(--card);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+}
+.progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--fg-muted); margin-bottom: 0.35rem; }
+.progress-label .counts { font-variant-numeric: tabular-nums; }
+.progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: var(--low); transition: width 0.3s ease; }
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 1.25rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  background-color: color-mix(in srgb, var(--card) 92%, transparent);
+}
+.controls-group { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.controls-group > label { font-size: 0.85rem; display: inline-flex; gap: 0.3rem; align-items: center; cursor: pointer; user-select: none; }
+.controls-group > label input[type="checkbox"] { cursor: pointer; }
+.controls-divider { width: 1px; height: 1.5rem; background: var(--border); }
+.controls-group h3 { font-size: 0.8rem; color: var(--fg-muted); font-weight: 500; margin-right: 0.25rem; }
+.controls button {
+  font: inherit;
+  padding: 0.3rem 0.75rem;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.controls button:hover { background: var(--row-hover); }
+#search {
+  font: inherit;
+  padding: 0.3rem 0.6rem;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  min-width: 220px;
+  font-size: 0.9rem;
+}
+#search:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.kbd { font-family: "SF Mono", Menlo, monospace; font-size: 0.75em; padding: 1px 5px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 3px; color: var(--fg-muted); background: var(--bg); }
+
+.convergent {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--convergent);
+  border-radius: 6px;
+  padding: 0.5rem 1rem 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.convergent ul { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+.convergent li { padding: 0.25rem 0; font-size: 0.9rem; border-bottom: 1px dashed var(--border); }
+.convergent li:last-child { border-bottom: none; }
+.convergent .jump { color: var(--accent); font-weight: 500; }
+
+details.file-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+details.file-section[open] { box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+details.file-section > summary {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  list-style: none;
+}
+details.file-section > summary::-webkit-details-marker { display: none; }
+details.file-section > summary::before {
+  content: "▶";
+  font-size: 0.7em;
+  transition: transform 0.15s;
+  color: var(--fg-muted);
+  width: 1em;
+}
+details.file-section[open] > summary::before { transform: rotate(90deg); }
+details.file-section .file-path { font-family: "SF Mono", Menlo, monospace; font-size: 0.9rem; }
+details.file-section .file-count {
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+  font-weight: normal;
+  margin-left: auto;
+}
+details.file-section .file-count .visible-count { font-variant-numeric: tabular-nums; }
+
+table.findings {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+table.findings th, table.findings td {
+  text-align: left;
+  padding: 0.55rem 0.8rem;
+  border-top: 1px solid var(--border);
+  vertical-align: top;
+}
+table.findings th {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+  background: var(--bg);
+}
+table.findings tbody tr:hover { background: var(--row-hover); }
+table.findings tbody tr.flash { background: var(--flash); transition: background 1.5s; }
+table.findings tbody tr.addressed { opacity: 0.55; }
+table.findings .col-id, table.findings .col-status, table.findings .col-priority, table.findings .col-line { white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.findings .col-id { font-family: "SF Mono", Menlo, monospace; font-weight: 600; color: var(--fg-muted); }
+table.findings .col-line { font-family: "SF Mono", Menlo, monospace; font-size: 0.85em; color: var(--fg-muted); }
+table.findings .status-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1em;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+table.findings .status-btn:hover { background: var(--row-hover); }
+table.findings .priority-critical { color: var(--critical); font-weight: 500; }
+table.findings .priority-high { color: var(--high); font-weight: 500; }
+table.findings .priority-medium { color: var(--medium); font-weight: 500; }
+table.findings .priority-low { color: var(--low); }
+table.findings .priority-nit { color: var(--nit); }
+table.findings .col-reviewers { font-size: 0.8rem; color: var(--fg-muted); }
+table.findings tr.convergent-row .col-id::after { content: " ⚡"; color: var(--convergent); }
+.reason-inline { display: block; font-size: 0.85rem; margin-top: 0.5rem; color: var(--fg-muted); font-style: italic; line-height: 1.4; }
+tr.addressed:not(.status-fp) .reason-inline:not(.has-reason) { display: none; }
+.reason-inline a.reason-edit { display: inline-block; margin-top: 0.25rem; padding: 0.3rem 0.7rem; font-style: normal; font-weight: 500; cursor: pointer; color: var(--accent); background: var(--bg); border: 1px solid var(--accent); border-radius: 4px; text-decoration: none; }
+.reason-inline a.reason-edit:hover { background: var(--accent); color: var(--bg); text-decoration: none; }
+.reason-inline.has-reason { color: var(--convergent); font-style: normal; }
+.reason-inline.has-reason em { font-style: italic; color: var(--fg); }
+.reason-inline.has-reason a.reason-edit { padding: 0.15rem 0.5rem; font-size: 0.8rem; margin-left: 0.4rem; margin-top: 0; }
+
+table.per-reviewer { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+table.per-reviewer th, table.per-reviewer td { padding: 0.55rem 0.8rem; text-align: left; border-top: 1px solid var(--border); }
+table.per-reviewer th { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-muted); background: var(--bg); }
+table.per-reviewer th:first-child, table.per-reviewer td:first-child { border-top: none; }
+
+.empty-filter { padding: 2rem; text-align: center; color: var(--fg-muted); font-style: italic; }
+.hidden { display: none !important; }
+
+footer { margin-top: 3rem; text-align: center; font-size: 0.8rem; color: var(--fg-muted); }
+
+/* ───── inline diff renderer ───── */
+.file-diff { margin: 0.5rem 0 1rem; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--bg); }
+.file-diff table.diff-table { width: 100%; border-collapse: collapse; font-family: "SF Mono", Menlo, Monaco, Consolas, monospace; font-size: 0.78rem; line-height: 1.45; tab-size: 4; }
+.file-diff td { padding: 0 0.4rem; vertical-align: top; white-space: pre; background: var(--bg); }
+.file-diff td.gutter { width: 3.5ch; text-align: right; color: var(--fg-muted); user-select: none; background: var(--card); border-right: 1px solid var(--border); position: relative; }
+/* Reset the global `code` chip styling so row tints show through */
+.file-diff td.code { padding-left: 0.5rem; }
+.file-diff td.code code { background: transparent; padding: 0; border-radius: 0; font-family: inherit; font-size: inherit; color: inherit; display: inline; white-space: pre; tab-size: 4; }
+.file-diff tr.diff-row.add td { background: rgba(34, 197, 94, 0.18); }
+.file-diff tr.diff-row.del td { background: rgba(239, 68, 68, 0.18); }
+.file-diff tr.diff-row.add td.gutter { background: rgba(34, 197, 94, 0.32); color: #15803d; }
+.file-diff tr.diff-row.del td.gutter { background: rgba(239, 68, 68, 0.32); color: #b91c1c; }
+.file-diff tr.diff-row.add td.code::before { content: "+ "; color: #16a34a; font-weight: 600; }
+.file-diff tr.diff-row.del td.code::before { content: "- "; color: #dc2626; font-weight: 600; }
+.file-diff tr.diff-row.ctx td.code::before { content: "  "; }
+@media (prefers-color-scheme: dark) {
+  .file-diff tr.diff-row.add td.gutter { color: #4ade80; }
+  .file-diff tr.diff-row.del td.gutter { color: #f87171; }
+}
+.file-binary, .file-empty { padding: 0.6rem 1rem; color: var(--fg-muted); font-style: italic; background: var(--card); border-radius: 6px; }
+.file-diff-toolbar { padding: 0.35rem 0.6rem; background: var(--card); border-bottom: 1px solid var(--border); font-size: 0.78rem; color: var(--fg-muted); display: flex; justify-content: space-between; align-items: center; }
+.diff-collapsed-bar td { padding: 0; background: var(--card); border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); }
+.diff-collapsed-inner { display: grid; grid-template-columns: auto 1fr auto; gap: 0.6rem; padding: 0.3rem 0.6rem; align-items: center; }
+.diff-collapsed-btn { font: inherit; font-size: 0.78rem; padding: 0.2rem 0.7rem; border: 1px solid var(--border); border-radius: 3px; background: var(--bg); color: var(--fg-muted); cursor: pointer; white-space: nowrap; }
+.diff-collapsed-btn:hover { color: var(--accent); border-color: var(--accent); }
+.diff-collapsed-btn.all { text-align: center; justify-self: center; min-width: 0; }
+
+/* ───── inline finding annotations ───── */
+tr.finding-annotation td { padding: 0; }
+.finding-annotation .body { margin: 0.2rem 0.4rem; padding: 0.4rem 0.6rem 0.5rem; border-left: 4px solid var(--high); border-radius: 0 4px 4px 0; background: color-mix(in srgb, var(--high) 8%, var(--card)); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 0.86rem; max-height: 8rem; overflow-y: auto; position: relative; }
+.finding-annotation.severity-critical .body { border-left-color: var(--critical); background: color-mix(in srgb, var(--critical) 10%, var(--card)); }
+.finding-annotation.severity-high     .body { border-left-color: var(--high);     background: color-mix(in srgb, var(--high) 8%, var(--card)); }
+.finding-annotation.severity-medium   .body { border-left-color: var(--medium);   background: color-mix(in srgb, var(--medium) 8%, var(--card)); }
+.finding-annotation.severity-low      .body { border-left-color: var(--low);      background: color-mix(in srgb, var(--low) 8%, var(--card)); }
+.finding-annotation.severity-nit      .body { border-left-color: var(--nit);      background: color-mix(in srgb, var(--nit) 8%, var(--card)); }
+.finding-annotation.expanded .body { max-height: none; }
+.finding-annotation .meta { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.25rem; font-size: 0.75rem; color: var(--fg-muted); }
+.finding-annotation .meta .severity-pill { font-weight: 600; padding: 0 0.4rem; border-radius: 8px; font-size: 0.7rem; }
+.finding-annotation .expand-toggle { position: absolute; top: 0.3rem; right: 0.4rem; background: transparent; border: 0; cursor: pointer; color: var(--fg-muted); font-size: 0.85rem; }
+.finding-annotation .convergent-badge { color: var(--convergent); font-weight: 600; }
+
+/* ───── free-form comment widget ───── */
+.diff-row { position: relative; }
+.diff-row .comment-add-btn { display: none; position: absolute; left: -1.4rem; top: 0; width: 1.3rem; height: 100%; background: var(--accent); color: white; border: 0; cursor: pointer; font-weight: 700; font-size: 0.85rem; line-height: 1; padding: 0.1rem 0; border-radius: 3px; opacity: 0.8; }
+.diff-row:hover .comment-add-btn { display: block; }
+.diff-row .comment-add-btn:hover { opacity: 1; }
+.comment-widget td { padding: 0; }
+.comment-widget .body { margin: 0.2rem 0.4rem; padding: 0.4rem 0.6rem 0.5rem; border-left: 4px solid var(--accent); border-radius: 0 4px 4px 0; background: color-mix(in srgb, var(--accent) 6%, var(--card)); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 0.86rem; max-height: 8rem; overflow-y: auto; position: relative; }
+.comment-widget.expanded .body { max-height: none; }
+.comment-widget .meta { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.3rem; font-size: 0.75rem; color: var(--fg-muted); }
+.comment-widget select, .comment-widget textarea { font: inherit; padding: 0.2rem 0.4rem; border: 1px solid var(--border); border-radius: 3px; background: var(--bg); color: var(--fg); }
+.comment-widget textarea { width: 100%; min-height: 3rem; resize: vertical; margin-top: 0.25rem; }
+.comment-widget .actions { margin-top: 0.35rem; display: flex; gap: 0.4rem; }
+.comment-widget .actions button { font: inherit; padding: 0.2rem 0.6rem; border: 1px solid var(--border); border-radius: 3px; background: var(--card); color: var(--fg); cursor: pointer; }
+.comment-widget .actions button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+.comment-widget .delete-btn { position: absolute; top: 0.3rem; right: 0.4rem; background: transparent; border: 0; cursor: pointer; color: var(--fg-muted); font-size: 1rem; }
+.comment-widget.is-rendered .body .editor { display: none; }
+.comment-widget.is-editing .body .rendered { display: none; }
+.comment-widget .rendered { white-space: pre-wrap; }
+
+/* ───── action bar (copy feedback + re-grade) ───── */
+.action-bar { display: flex; gap: 0.6rem; align-items: center; margin-bottom: 0.75rem; }
+.action-btn { padding: 0.45rem 0.8rem; font: inherit; font-size: 0.9rem; border: 1px solid var(--border); border-radius: 5px; background: var(--card); color: var(--fg); cursor: pointer; }
+.action-btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+.action-btn:hover { filter: brightness(1.05); }
+.action-status { color: var(--fg-muted); font-size: 0.85rem; transition: opacity 0.3s; }
+.action-status.flash { color: var(--low); font-weight: 600; }
+.fallback-textarea { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 70vw; height: 60vh; padding: 1rem; background: var(--bg); color: var(--fg); border: 2px solid var(--accent); border-radius: 8px; font-family: "SF Mono", monospace; font-size: 0.85rem; }
+
+/* ───── re-grade animation ───── */
+.verdict-banner { transition: border-left-color 0.3s, background 0.3s; }
+.verdict-banner.flash { animation: regrade-flash 0.6s; }
+@keyframes regrade-flash {
+  0%   { background: color-mix(in srgb, var(--accent) 18%, var(--card)); }
+  100% { background: var(--card); }
+}
+.grade-letter { transition: color 0.3s; }
+/* Long finding/comment bodies must wrap inside the diff table. The diff <td>s
+   have white-space: pre to preserve code indentation; we need to override that
+   for annotation/comment cells. */
+.file-diff tr.finding-annotation td,
+.file-diff tr.comment-widget td { white-space: normal; }
+.file-diff tr.finding-annotation .body,
+.file-diff tr.comment-widget .body { white-space: normal; word-wrap: break-word; overflow-wrap: anywhere; }
+.file-diff tr.finding-annotation .content,
+.file-diff tr.comment-widget .rendered { white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
+</style>
+{{PRISM_BUNDLE}}
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>{{TITLE}}</h1>
+    <dl class="meta-grid">
+      {{META_ROWS}}
+    </dl>
+  </header>
+
+  <section>
+    <h2>Summary</h2>
+    <ul>
+      {{SUMMARY_BULLETS}}
+    </ul>
+  </section>
+
+  <div class="verdict-banner grade-{{GRADE_CLASS}}">
+    <strong>Verdict: <span class="verdict-emoji">{{VERDICT_EMOJI}}</span> <span class="verdict-text">{{VERDICT_TEXT}}</span> — Grade: <span class="grade-letter">{{GRADE_LETTER}}</span></strong>
+    <p class="verdict-rationale" style="margin:0.35rem 0 0; color: var(--fg-muted); font-size: 0.9rem;">{{VERDICT_RATIONALE}}</p>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>Progress — click the status cell on any finding to cycle ⬜ → ✅ → 🟣. Saved locally, survives reload.</span>
+      <span class="counts"><span id="progress-done">0</span> / <span id="progress-total">{{TOTAL_FINDINGS}}</span> resolved</span>
+    </div>
+    <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill" style="width:0%;"></div></div>
+  </div>
+
+  <div class="action-bar">
+    <button class="action-btn primary" id="copy-feedback-btn">📋 Copy feedback block (<span data-open-count>0</span> open)</button>
+    <button class="action-btn" id="regrade-btn">🎯 Re-grade (<span data-open-count>0</span> open)</button>
+    <span class="action-status" id="action-status"></span>
+  </div>
+
+  <div class="controls">
+    <div class="controls-group">
+      <h3>Severity</h3>
+      <label><input type="checkbox" data-filter="severity" value="critical" checked> 🔴 Critical</label>
+      <label><input type="checkbox" data-filter="severity" value="high" checked> 🟠 High</label>
+      <label><input type="checkbox" data-filter="severity" value="medium" checked> 🟡 Medium</label>
+      <label><input type="checkbox" data-filter="severity" value="low" checked> 🟢 Low</label>
+      <label><input type="checkbox" data-filter="severity" value="nit" checked> ⚪ Nit</label>
+    </div>
+    <div class="controls-divider"></div>
+    <div class="controls-group">
+      <h3>Reviewer</h3>
+      {{REVIEWER_CHECKBOXES}}
+    </div>
+    <div class="controls-divider"></div>
+    <div class="controls-group">
+      <label><input type="checkbox" id="convergent-only"> ⚡ Convergent only</label>
+      <label><input type="checkbox" id="hide-resolved"> Hide ✅/🟣</label>
+    </div>
+    <div class="controls-divider"></div>
+    <input type="search" id="search" placeholder="Search findings (press /)">
+    <div class="controls-divider"></div>
+    <button id="expand-all" title="Expand all (e)">Expand all</button>
+    <button id="collapse-all" title="Collapse all (c)">Collapse all</button>
+    <button id="reset-filters" title="Reset filters (Esc)">Reset</button>
+    <button id="copy-fps" title="Copy calibration entries for all findings marked 🟣 FP — paste into ~/.claude/skills/review-swarm/references/calibration.md">🟣 Copy FPs (<span id="fp-count">0</span>)</button>
+    <span style="margin-left:auto; font-size:0.78rem; color:var(--fg-muted);">
+      <span class="kbd">/</span> search · <span class="kbd">e</span> expand · <span class="kbd">c</span> collapse · <span class="kbd">Esc</span> reset
+    </span>
+  </div>
+
+  <section>
+    <h2>{{SIMPLIFY_HEADING}}</h2>
+    {{SIMPLIFY_BLOCK}}
+  </section>
+
+  <section class="convergent">
+    <h2 style="border:none; margin-top:0;">⚡ Convergent findings <span style="color:var(--fg-muted); font-weight:normal; font-size:0.9rem;">— flagged by 2+ reviewers, click to jump</span></h2>
+    <ul>
+      {{CONVERGENT_ITEMS}}
+    </ul>
+  </section>
+
+  <section>
+    <h2>Findings by file</h2>
+    <p style="color:var(--fg-muted); font-size:0.85rem; margin-top:0;">
+      Files ordered by urgency (highest max-severity first; ties broken by finding count). HIGH-max files are expanded by default.
+      Legend: ⬜ open · ✅ addressed · 🟣 false positive · 🔴 Critical · 🟠 High · 🟡 Medium · 🟢 Low · ⚪ Nit · ⚡ convergent.
+    </p>
+    {{FILE_SECTIONS}}
+    <div id="empty-filter" class="empty-filter hidden">No findings match the current filters.</div>
+  </section>
+
+  <section>
+    <h2>Per-reviewer summaries</h2>
+    <table class="per-reviewer">
+      <thead>
+        <tr><th>Reviewer</th><th>Risk</th><th>Grade</th><th>Takeaway</th></tr>
+      </thead>
+      <tbody>
+        {{REVIEWER_ROWS}}
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    Generated by review-swarm · {{GENERATED_AT}} · Report state is stored in your browser's localStorage under key <code>{{STORAGE_KEY}}</code>
+  </footer>
+
+</div>
+
+<script>
+(function() {
+  const STORAGE_KEY = "{{STORAGE_KEY}}";
+  const REPO_SLUG = "{{REPO_SLUG}}";
+  const REPORT_FILENAME = "{{REPORT_FILENAME}}";
+  const STATUS_CYCLE = ["open", "addressed", "fp"];
+  const STATUS_EMOJI = { open: "⬜", addressed: "✅", fp: "🟣" };
+  const STATUS_TITLE = { open: "Open (click to mark addressed)", addressed: "Addressed (click to mark FP)", fp: "False positive (click to reopen)" };
+
+  // Load persisted status + per-finding FP reasons
+  const REASONS_KEY = STORAGE_KEY + ":reasons";
+  const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  const reasons = JSON.parse(localStorage.getItem(REASONS_KEY) || "{}");
+
+  function persist() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function persistReasons() { localStorage.setItem(REASONS_KEY, JSON.stringify(reasons)); }
+
+  // Hydrate status cells + inject reason-inline element into each body cell
+  document.querySelectorAll("tr[data-finding-id]").forEach(row => {
+    const id = row.dataset.findingId;
+    const status = state[id] || "open";
+    const bodyTd = row.querySelectorAll("td")[4];
+    if (bodyTd && !bodyTd.querySelector(".reason-inline")) {
+      const div = document.createElement("div");
+      div.className = "reason-inline";
+      bodyTd.appendChild(div);
+    }
+    applyStatusToRow(row, status);
+    renderReasonInline(row);
+  });
+
+  function applyStatusToRow(row, status) {
+    const btn = row.querySelector(".status-btn");
+    if (btn) {
+      btn.textContent = STATUS_EMOJI[status];
+      btn.title = STATUS_TITLE[status];
+      btn.dataset.status = status;
+    }
+    row.classList.toggle("addressed", status !== "open");
+    row.classList.toggle("status-fp", status === "fp");
+  }
+
+  function syncStatusButtonsAcrossSurfaces(findingId, status) {
+    // Updates every .status-btn with the same data-finding-id (table row + annotation row)
+    // so clicking one surface keeps the other in sync.
+    document.querySelectorAll(`.status-btn[data-finding-id="${CSS.escape(findingId)}"]`).forEach(b => {
+      b.textContent = STATUS_EMOJI[status];
+      b.title = STATUS_TITLE[status];
+      b.dataset.status = status;
+    });
+  }
+
+  function renderReasonInline(row) {
+    const div = row.querySelector(".reason-inline");
+    if (!div) return;
+    const id = row.dataset.findingId;
+    const reason = reasons[id];
+    const status = state[id] || "open";
+    const isFp = status === "fp";
+    div.textContent = "";
+    if (reason) {
+      div.className = "reason-inline has-reason";
+      div.append(document.createTextNode(isFp ? "💬 Reason: " : "💬 Note: "));
+      const em = document.createElement("em");
+      em.textContent = reason;
+      div.append(em, document.createTextNode(" · "));
+      const a = document.createElement("a");
+      a.className = "reason-edit";
+      a.textContent = "edit";
+      div.append(a);
+    } else {
+      div.className = "reason-inline";
+      const a = document.createElement("a");
+      a.className = "reason-edit";
+      a.textContent = isFp
+        ? "📝 Add reason (shown to reviewers on next run)"
+        : "📝 Add direction (sent to agent in feedback)";
+      div.append(a);
+    }
+  }
+
+  function editReason(row) {
+    const id = row.dataset.findingId;
+    const status = state[id] || "open";
+    const isFp = status === "fp";
+    const current = reasons[id] || "";
+    const message = isFp
+      ? "Why is this a false positive?\n\nThis is surfaced to the matching reviewer on the next /review-swarm run so the pattern isn't re-raised."
+      : "Add direction for the agent — context, implementation hint, or constraint.\n\nThis will be included in the feedback block when you copy it to the agent.";
+    const next = window.prompt(message, current);
+    if (next === null) return;
+    const trimmed = next.trim();
+    if (trimmed === "") { delete reasons[id]; } else { reasons[id] = trimmed; }
+    persistReasons();
+    document.querySelectorAll(`tr[data-finding-id="${CSS.escape(id)}"]`).forEach(r => {
+      renderReasonInline(r);
+    });
+  }
+
+  // Status cycling + reason editing
+  document.addEventListener("click", e => {
+    const editLink = e.target.closest(".reason-edit");
+    if (editLink) {
+      const row = editLink.closest("tr[data-finding-id]");
+      if (row) editReason(row);
+      return;
+    }
+    const btn = e.target.closest(".status-btn");
+    if (!btn) return;
+    const id = btn.dataset.findingId || btn.closest("tr[data-finding-id]")?.dataset.findingId;
+    if (!id) return;
+    const current = btn.dataset.status || "open";
+    const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(current) + 1) % STATUS_CYCLE.length];
+    if (next === "open") { delete state[id]; } else { state[id] = next; }
+    persist();
+    // Apply class + button + reason-render to every row with this findingId
+    // (table row + every annotation row in the diff).
+    document.querySelectorAll(`tr[data-finding-id="${CSS.escape(id)}"]`).forEach(r => {
+      applyStatusToRow(r, next);
+      renderReasonInline(r);
+    });
+    updateProgress();
+    applyFilters();
+  });
+
+  function updateProgress() {
+    // Scope to findings table only — annotation rows in the diff also carry
+    // data-finding-id and would otherwise double-count.
+    const rows = document.querySelectorAll("table.findings tr[data-finding-id]");
+    const done = Array.from(rows).filter(r => r.classList.contains("addressed")).length;
+    document.getElementById("progress-done").textContent = done;
+    const pct = rows.length ? (done / rows.length * 100) : 0;
+    document.getElementById("progress-fill").style.width = pct + "%";
+    const fpCount = Array.from(rows).filter(r => r.querySelector(".status-btn")?.dataset.status === "fp").length;
+    const fpEl = document.getElementById("fp-count");
+    if (fpEl) fpEl.textContent = fpCount;
+  }
+
+  function showToast(msg) {
+    let toast = document.getElementById("toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "toast";
+      toast.style.cssText = "position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:0.6rem 1rem;border-radius:6px;font-size:0.9rem;z-index:100;opacity:0;transition:opacity 0.2s;box-shadow:0 4px 12px rgba(0,0,0,0.15);max-width:80vw;";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    requestAnimationFrame(() => { toast.style.opacity = "1"; });
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => { toast.style.opacity = "0"; }, 2500);
+  }
+
+  function copyFPEntries() {
+    // Scope to findings table only — avoids emitting duplicate FP entries for
+    // each row's annotation in the diff (which shares the same findingId).
+    const fpRows = Array.from(document.querySelectorAll("table.findings tr[data-finding-id]"))
+      .filter(r => r.querySelector(".status-btn")?.dataset.status === "fp");
+    if (fpRows.length === 0) {
+      showToast("No findings marked as false positive yet. Click a status cell to cycle ⬜ → ✅ → 🟣.");
+      return;
+    }
+    const date = new Date().toISOString().slice(0, 10);
+    const header = `## ${date} — ${REPO_SLUG} — ${REPORT_FILENAME}`;
+    const entries = fpRows.map(r => {
+      const tds = r.querySelectorAll("td");
+      const id = r.dataset.findingId;
+      const severity = (r.dataset.severity || "").toUpperCase();
+      const reviewers = tds[5]?.textContent.trim() || "(unknown)";
+      const line = tds[3]?.textContent.trim() || "(unknown)";
+      const body = tds[4]?.textContent.trim() || "";
+      const file = r.closest("details.file-section")?.querySelector(".file-path")?.textContent.trim() || "(general)";
+      const reason = reasons[id] || "(not given)";
+      return `- Finding #${id} (${reviewers}, ${severity}): ${body}\n  Location: ${file}:${line}\n  Marked FP. Reason: ${reason}`;
+    }).join("\n\n");
+    const out = `${header}\n${entries}\n`;
+    const onOk = () => showToast(`Copied ${fpRows.length} calibration ${fpRows.length === 1 ? "entry" : "entries"} — paste into calibration.md`);
+    const onFail = () => {
+      // Fallback: show in a prompt the user can manually copy from
+      window.prompt("Copy this block into ~/.claude/skills/review-swarm/references/calibration.md :", out);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(out).then(onOk, onFail);
+    } else {
+      onFail();
+    }
+  }
+
+  document.getElementById("copy-fps")?.addEventListener("click", copyFPEntries);
+
+  // Filters
+  function applyFilters() {
+    const allowedSeverities = new Set(
+      Array.from(document.querySelectorAll('input[data-filter="severity"]:checked')).map(i => i.value)
+    );
+    const allowedReviewers = new Set(
+      Array.from(document.querySelectorAll('input[data-filter="reviewer"]:checked')).map(i => i.value)
+    );
+    const convergentOnly = document.getElementById("convergent-only").checked;
+    const hideResolved = document.getElementById("hide-resolved").checked;
+    const search = document.getElementById("search").value.toLowerCase().trim();
+
+    let anyVisible = false;
+
+    document.querySelectorAll("details.file-section").forEach(section => {
+      let visibleCount = 0;
+      // Scope to findings table only — annotation rows in the diff also carry
+      // data-finding-id but lack severity/reviewer datasets, so they would otherwise
+      // always fail the filter and disappear from the diff.
+      section.querySelectorAll("table.findings tr[data-finding-id]").forEach(row => {
+        const sev = row.dataset.severity;
+        const reviewers = (row.dataset.reviewers || "").split(",").map(s => s.trim()).filter(Boolean);
+        const isConvergent = row.classList.contains("convergent-row");
+        const isResolved = row.classList.contains("addressed");
+        const text = row.textContent.toLowerCase();
+
+        let show = true;
+        if (!allowedSeverities.has(sev)) show = false;
+        if (allowedReviewers.size && !reviewers.some(r => allowedReviewers.has(r))) show = false;
+        if (convergentOnly && !isConvergent) show = false;
+        if (hideResolved && isResolved) show = false;
+        if (search && !text.includes(search)) show = false;
+
+        row.classList.toggle("hidden", !show);
+        if (show) { visibleCount++; anyVisible = true; }
+      });
+      const countEl = section.querySelector(".visible-count");
+      if (countEl) countEl.textContent = visibleCount;
+      section.classList.toggle("hidden", visibleCount === 0);
+    });
+
+    document.getElementById("empty-filter").classList.toggle("hidden", anyVisible);
+  }
+
+  document.querySelectorAll('.controls input').forEach(el => el.addEventListener("change", applyFilters));
+  document.getElementById("search").addEventListener("input", applyFilters);
+
+  // Expand / collapse / reset
+  document.getElementById("expand-all").addEventListener("click", () => {
+    document.querySelectorAll("details.file-section").forEach(d => d.open = true);
+  });
+  document.getElementById("collapse-all").addEventListener("click", () => {
+    document.querySelectorAll("details.file-section").forEach(d => d.open = false);
+  });
+  document.getElementById("reset-filters").addEventListener("click", () => {
+    document.querySelectorAll('.controls input[type="checkbox"]').forEach(i => {
+      i.checked = (i.dataset.filter === "severity" || i.dataset.filter === "reviewer");
+    });
+    document.getElementById("convergent-only").checked = false;
+    document.getElementById("hide-resolved").checked = false;
+    document.getElementById("search").value = "";
+    applyFilters();
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+      if (e.key === "Escape") {
+        document.getElementById("search").blur();
+        document.getElementById("reset-filters").click();
+      }
+      return;
+    }
+    if (e.key === "/") { e.preventDefault(); document.getElementById("search").focus(); }
+    else if (e.key === "e") { document.getElementById("expand-all").click(); }
+    else if (e.key === "c") { document.getElementById("collapse-all").click(); }
+    else if (e.key === "Escape") { document.getElementById("reset-filters").click(); }
+  });
+
+  // Jump-to-finding links: expand parent section + flash highlight
+  document.querySelectorAll("a.jump").forEach(a => {
+    a.addEventListener("click", e => {
+      const href = a.getAttribute("href");
+      if (!href || !href.startsWith("#")) return;
+      const target = document.querySelector(href);
+      if (!target) return;
+      const section = target.closest("details.file-section");
+      if (section) section.open = true;
+      setTimeout(() => {
+        target.classList.add("flash");
+        setTimeout(() => target.classList.remove("flash"), 1500);
+      }, 50);
+    });
+  });
+
+  updateProgress();
+  applyFilters();
+
+  // ───── inline diff renderer ─────────────────────────────────────────────
+  function detectLanguage(filePath) {
+    const ext = (filePath.split(".").pop() || "").toLowerCase();
+    const map = {
+      py: "python", ts: "typescript", tsx: "tsx", jsx: "jsx", js: "javascript",
+      go: "go", rs: "rust", yml: "yaml", yaml: "yaml", json: "json",
+      sql: "sql", sh: "bash", bash: "bash", md: "markdown",
+      html: "markup", htm: "markup", css: "css"
+    };
+    return map[ext] || null;
+  }
+
+  function parseUnifiedDiff(diffText) {
+    // Returns an array of { kind: "add"|"del"|"ctx", oldLine, newLine, code }.
+    // Handles -U999999 output: one big hunk per file containing every line.
+    const lines = diffText.split("\n");
+    const out = [];
+    let oldNo = 0, newNo = 0, inHunk = false;
+    for (const line of lines) {
+      if (line.startsWith("@@")) {
+        const m = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+        if (m) { oldNo = parseInt(m[1], 10); newNo = parseInt(m[2], 10); inHunk = true; }
+        continue;
+      }
+      if (!inHunk) continue;
+      if (line.startsWith("+++") || line.startsWith("---")) continue;
+      if (line.startsWith("+")) {
+        out.push({ kind: "add", oldLine: null, newLine: newNo++, code: line.slice(1) });
+      } else if (line.startsWith("-")) {
+        out.push({ kind: "del", oldLine: oldNo++, newLine: null, code: line.slice(1) });
+      } else if (line.startsWith(" ")) {
+        out.push({ kind: "ctx", oldLine: oldNo++, newLine: newNo++, code: line.slice(1) });
+      }
+      // empty lines and other formats are skipped
+    }
+    return out;
+  }
+
+  function renderDiff(section) {
+    const filePath = section.dataset.file;
+    const diffText = section.dataset.diff || "";
+
+    // Replace the empty section with rendered content using DOM builders only.
+    while (section.firstChild) section.removeChild(section.firstChild);
+
+    if (!diffText.trim()) {
+      const empty = document.createElement("div");
+      empty.className = "file-empty";
+      empty.textContent = "No diff captured for this file — see report metadata above.";
+      section.appendChild(empty);
+      return;
+    }
+    if (diffText.startsWith("Binary files")) {
+      const bin = document.createElement("div");
+      bin.className = "file-binary";
+      bin.textContent = "Binary file — not rendered";
+      section.appendChild(bin);
+      return;
+    }
+
+    const rows = parseUnifiedDiff(diffText);
+    if (rows.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "file-empty";
+      empty.textContent = `No diff content to render for ${filePath}.`;
+      section.appendChild(empty);
+      return;
+    }
+
+    const lang = detectLanguage(filePath);
+    const useHighlight = lang && window.Prism && Prism.languages && Prism.languages[lang] && diffText.length < 1_000_000;
+
+    // Toolbar with file path + line count.
+    const toolbar = document.createElement("div");
+    toolbar.className = "file-diff-toolbar";
+    const pathSpan = document.createElement("span");
+    pathSpan.textContent = filePath;
+    const countSpan = document.createElement("span");
+    countSpan.textContent = `${rows.length} lines`;
+    toolbar.append(pathSpan, countSpan);
+    section.appendChild(toolbar);
+
+    const table = document.createElement("table");
+    table.className = "diff-table";
+    const tbody = document.createElement("tbody");
+    for (const row of rows) {
+      const tr = document.createElement("tr");
+      tr.className = `diff-row ${row.kind}`;
+      tr.dataset.kind = row.kind;
+      if (row.oldLine !== null) tr.dataset.oldLine = String(row.oldLine);
+      if (row.newLine !== null) tr.dataset.newLine = String(row.newLine);
+      tr.dataset.file = filePath;
+
+      const oldCell = document.createElement("td");
+      oldCell.className = "gutter old";
+      oldCell.textContent = row.oldLine !== null ? String(row.oldLine) : "";
+      const newCell = document.createElement("td");
+      newCell.className = "gutter new";
+      newCell.textContent = row.newLine !== null ? String(row.newLine) : "";
+      const codeCell = document.createElement("td");
+      codeCell.className = "code";
+      if (useHighlight) {
+        const codeEl = document.createElement("code");
+        codeEl.className = `language-${lang}`;
+        codeEl.textContent = row.code;
+        codeCell.appendChild(codeEl);
+        try { Prism.highlightElement(codeEl); } catch (e) { /* fall back to text */ }
+      } else {
+        codeCell.textContent = row.code;
+      }
+      tr.append(oldCell, newCell, codeCell);
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    section.appendChild(table);
+
+    if (!useHighlight && lang) {
+      const note = document.createElement("small");
+      note.style.color = "var(--fg-muted)";
+      note.style.padding = "0.4rem 0.6rem";
+      note.style.display = "block";
+      note.textContent = "Syntax highlighting skipped for this file (size).";
+      section.appendChild(note);
+    }
+  }
+
+  document.querySelectorAll(".file-diff[data-diff]").forEach(renderDiff);
+
+  // ───── findings as inline annotations ────────────────────────────────────
+  function severityLabel(s) {
+    return ({ critical: "🔴 Critical", high: "🟠 High", medium: "🟡 Medium", low: "🟢 Low", nit: "⚪ Nit" })[s] || s;
+  }
+
+  function buildAnnotationRow(opts) {
+    // opts: { findingId, severity, reviewers, isConvergent, bodyText, status }
+    const tr = document.createElement("tr");
+    tr.className = `finding-annotation severity-${opts.severity}`;
+    tr.dataset.findingId = opts.findingId;
+    tr.dataset.role = "finding";
+
+    const td = document.createElement("td");
+    td.colSpan = 3;
+    const body = document.createElement("div");
+    body.className = "body";
+
+    const expandBtn = document.createElement("button");
+    expandBtn.className = "expand-toggle";
+    expandBtn.title = "Expand / collapse";
+    expandBtn.textContent = "▾";
+    expandBtn.addEventListener("click", e => {
+      e.preventDefault();
+      tr.classList.toggle("expanded");
+    });
+    body.appendChild(expandBtn);
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+
+    const statusBtn = document.createElement("button");
+    statusBtn.className = "status-btn";
+    statusBtn.dataset.findingId = opts.findingId;
+    const status = opts.status || "open";
+    statusBtn.dataset.status = status;
+    statusBtn.title = STATUS_TITLE[status];
+    statusBtn.textContent = STATUS_EMOJI[status];
+    meta.appendChild(statusBtn);
+
+    const sevPill = document.createElement("span");
+    sevPill.className = `severity-pill priority-${opts.severity}`;
+    sevPill.textContent = severityLabel(opts.severity);
+    meta.appendChild(sevPill);
+
+    const reviewersSpan = document.createElement("span");
+    reviewersSpan.className = "reviewers";
+    reviewersSpan.textContent = (opts.reviewers || "").replace(/,/g, " · ");
+    meta.appendChild(reviewersSpan);
+
+    if (opts.isConvergent) {
+      const conv = document.createElement("span");
+      conv.className = "convergent-badge";
+      conv.textContent = "⚡ convergent";
+      meta.appendChild(conv);
+    }
+
+    const link = document.createElement("a");
+    link.href = `#finding-${opts.findingId}`;
+    link.textContent = `#${opts.findingId}`;
+    const linkSpan = document.createElement("span");
+    linkSpan.className = "finding-link";
+    linkSpan.appendChild(link);
+    meta.appendChild(linkSpan);
+
+    body.appendChild(meta);
+
+    const content = document.createElement("div");
+    content.className = "content";
+    content.textContent = opts.bodyText;
+    body.appendChild(content);
+
+    const reasonDiv = document.createElement("div");
+    reasonDiv.className = "reason-inline";
+    body.appendChild(reasonDiv);
+
+    td.appendChild(body);
+    tr.appendChild(td);
+    return tr;
+  }
+
+  function injectFindingAnnotations() {
+    document.querySelectorAll("tr[id^='finding-']").forEach(findingRow => {
+      const findingId = findingRow.dataset.findingId;
+      const severity = findingRow.dataset.severity;
+      const reviewers = findingRow.dataset.reviewers || "";
+      const isConvergent = findingRow.classList.contains("convergent-row");
+      const lineCell = findingRow.querySelector(".col-line");
+      const bodyCell = findingRow.children[4]; // 5th column = "Finding" body
+      if (!lineCell || !bodyCell) return;
+
+      const lineSpec = lineCell.textContent.trim();
+      if (!lineSpec || lineSpec === "general") return;
+      const lines = lineSpec.split(",").map(s => s.trim()).filter(s => /^\d+$/.test(s)).map(Number);
+      if (lines.length === 0) return;
+      const anchorLine = lines[0];
+
+      const fileSection = findingRow.closest(".file-section");
+      if (!fileSection) return;
+      const diffSection = fileSection.querySelector(".file-diff");
+      if (!diffSection) return;
+
+      const targetRow = diffSection.querySelector(`tr.diff-row[data-new-line="${anchorLine}"]`)
+                     || diffSection.querySelector(`tr.diff-row[data-old-line="${anchorLine}"]`);
+      if (!targetRow) {
+        // Finding cites a line not present in the diff. Add a warning row at top of diff table.
+        const tbody = diffSection.querySelector("tbody");
+        if (!tbody) return;
+        const warn = document.createElement("tr");
+        warn.className = "finding-annotation severity-nit warning-row";
+        const td = document.createElement("td");
+        td.colSpan = 3;
+        const div = document.createElement("div");
+        div.className = "body";
+        div.textContent = `⚠ Finding #${findingId} cites line ${anchorLine} which is not present in this diff. Shown in findings table only.`;
+        td.appendChild(div);
+        warn.appendChild(td);
+        tbody.insertBefore(warn, tbody.firstChild);
+        return;
+      }
+
+      const findingStatus = state[findingId] || "open";
+      // Strip the reason-inline div before extracting body text — the hydration loop
+      // injects it after the body cell, and `.textContent` would otherwise pull
+      // "📝 Add reason…" into the annotation as plain unclickable text.
+      const bodyClone = bodyCell.cloneNode(true);
+      bodyClone.querySelectorAll(".reason-inline").forEach(el => el.remove());
+      const annotation = buildAnnotationRow({
+        findingId, severity, reviewers, isConvergent,
+        bodyText: bodyClone.textContent.trim(),
+        status: findingStatus,
+      });
+      targetRow.parentNode.insertBefore(annotation, targetRow.nextSibling);
+      applyStatusToRow(annotation, findingStatus);
+      renderReasonInline(annotation);
+    });
+    // After insertion, hide expand chevrons on annotations whose body fits without
+    // overflow (chevron toggle would be a no-op there and just confuses the user).
+    requestAnimationFrame(() => {
+      document.querySelectorAll(".finding-annotation").forEach(tr => {
+        const body = tr.querySelector(".body");
+        const chevron = tr.querySelector(".expand-toggle");
+        if (!body || !chevron) return;
+        if (body.scrollHeight <= body.clientHeight + 1) chevron.style.display = "none";
+      });
+    });
+  }
+
+  injectFindingAnnotations();
+
+  // Sync annotation buttons to stored status on load (annotation rows + table rows
+  // both expose .status-btn with data-finding-id; the existing click handler
+  // already cascades icon updates across both surfaces via syncStatusButtons).
+  Object.entries(state).forEach(([id, status]) => {
+    document.querySelectorAll(`.status-btn[data-finding-id="${CSS.escape(id)}"]`).forEach(b => {
+      b.dataset.status = status;
+      b.textContent = STATUS_EMOJI[status];
+      b.title = STATUS_TITLE[status];
+    });
+  });
+
+  // ───── free-form comments ────────────────────────────────────────────────
+  const COMMENTS_KEY = STORAGE_KEY + ":comments";
+  let comments = [];
+  try { comments = JSON.parse(localStorage.getItem(COMMENTS_KEY) || "[]"); } catch (e) { comments = []; }
+
+  function persistComments() {
+    try {
+      localStorage.setItem(COMMENTS_KEY, JSON.stringify(comments));
+    } catch (e) {
+      if (e && e.name === "QuotaExceededError") {
+        alert("Comment too large to save locally. Try copying it to a separate doc and shortening.");
+      }
+      throw e;
+    }
+  }
+
+  function buildSeveritySelect(current) {
+    const sel = document.createElement("select");
+    sel.className = "severity-select";
+    for (const s of ["CRITICAL","HIGH","MEDIUM","LOW","NIT"]) {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      if (current === s) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    return sel;
+  }
+
+  function makeCommentWidget(comment) {
+    const tr = document.createElement("tr");
+    tr.className = "comment-widget is-rendered";
+    tr.dataset.commentId = comment.id;
+
+    const td = document.createElement("td");
+    td.colSpan = 3;
+    const body = document.createElement("div");
+    body.className = "body";
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-btn";
+    deleteBtn.title = "Delete comment";
+    deleteBtn.textContent = "×";
+    body.appendChild(deleteBtn);
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    const sevPill = document.createElement("span");
+    sevPill.className = `severity-pill priority-${comment.severity.toLowerCase()}`;
+    sevPill.textContent = `💬 ${comment.severity}`;
+    meta.appendChild(sevPill);
+    const lineSpan = document.createElement("span");
+    lineSpan.textContent = `line ${comment.line}${comment.lineKind === "del" ? " (deleted)" : ""}`;
+    meta.appendChild(lineSpan);
+    body.appendChild(meta);
+
+    const rendered = document.createElement("div");
+    rendered.className = "rendered";
+    rendered.textContent = comment.body;
+    body.appendChild(rendered);
+
+    const editor = document.createElement("div");
+    editor.className = "editor";
+    const sel = buildSeveritySelect(comment.severity);
+    editor.appendChild(sel);
+    const ta = document.createElement("textarea");
+    ta.placeholder = "Type a note (Cmd+Enter to save)";
+    ta.value = comment.body;
+    editor.appendChild(ta);
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "primary save-btn";
+    saveBtn.textContent = "Save";
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "cancel-btn";
+    cancelBtn.textContent = "Cancel";
+    actions.append(saveBtn, cancelBtn);
+    editor.appendChild(actions);
+    body.appendChild(editor);
+
+    td.appendChild(body);
+    tr.appendChild(td);
+
+    rendered.addEventListener("click", () => tr.classList.replace("is-rendered","is-editing"));
+    const save = () => {
+      const idx = comments.findIndex(c => c.id === comment.id);
+      if (idx < 0) {
+        // first save (newly-created widget)
+        if (!ta.value.trim()) return;
+        comments.push({ ...comment, body: ta.value, severity: sel.value, updatedAt: Date.now() });
+      } else {
+        comments[idx].body = ta.value;
+        comments[idx].severity = sel.value;
+        comments[idx].updatedAt = Date.now();
+      }
+      persistComments();
+      rendered.textContent = ta.value;
+      sevPill.className = `severity-pill priority-${sel.value.toLowerCase()}`;
+      sevPill.textContent = `💬 ${sel.value}`;
+      tr.classList.replace("is-editing","is-rendered");
+      if (typeof updateOpenCount === "function") updateOpenCount();
+    };
+    saveBtn.addEventListener("click", save);
+    cancelBtn.addEventListener("click", () => {
+      ta.value = comment.body;
+      sel.value = comment.severity;
+      if (!comments.find(c => c.id === comment.id)) {
+        tr.remove();
+      } else {
+        tr.classList.replace("is-editing","is-rendered");
+      }
+    });
+    ta.addEventListener("keydown", e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); save(); }
+    });
+    deleteBtn.addEventListener("click", () => {
+      if (!confirm("Delete this comment?")) return;
+      comments = comments.filter(c => c.id !== comment.id);
+      persistComments();
+      tr.remove();
+      if (typeof updateOpenCount === "function") updateOpenCount();
+    });
+
+    return tr;
+  }
+
+  function attachCommentAddButtons() {
+    document.querySelectorAll(".file-diff tr.diff-row").forEach(row => {
+      const codeCell = row.querySelector("td.code");
+      if (!codeCell) return;
+      if (row.querySelector(".comment-add-btn")) return; // idempotent
+      const btn = document.createElement("button");
+      btn.className = "comment-add-btn";
+      btn.title = "Add a comment on this line";
+      btn.textContent = "+";
+      btn.addEventListener("click", () => spawnCommentEditor(row));
+      codeCell.style.position = "relative";
+      codeCell.prepend(btn);
+    });
+  }
+
+  function spawnCommentEditor(diffRow) {
+    const file = diffRow.dataset.file;
+    const line = parseInt(diffRow.dataset.newLine || diffRow.dataset.oldLine || "0", 10);
+    const lineKind = diffRow.dataset.kind;
+    const draft = {
+      id: "c-" + Date.now(),
+      file, line, lineKind,
+      severity: "MEDIUM",
+      body: "",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    const widget = makeCommentWidget(draft);
+    widget.classList.replace("is-rendered","is-editing");
+    diffRow.parentNode.insertBefore(widget, diffRow.nextSibling);
+    widget.querySelector("textarea").focus();
+  }
+
+  function renderExistingComments() {
+    for (const c of comments) {
+      const fileSection = document.querySelector(`.file-diff[data-file="${CSS.escape(c.file)}"]`);
+      if (!fileSection) continue;
+      const target = fileSection.querySelector(`tr.diff-row[data-new-line="${c.line}"]`)
+                  || fileSection.querySelector(`tr.diff-row[data-old-line="${c.line}"]`);
+      if (!target) continue;
+      const widget = makeCommentWidget(c);
+      target.parentNode.insertBefore(widget, target.nextSibling);
+    }
+  }
+
+  attachCommentAddButtons();
+  renderExistingComments();
+
+  // ───── collapse long stretches of unchanged context ─────────────────────
+  function rowIsMustShow(tr) {
+    // A ctx row must stay visible if a finding annotation or comment widget anchors to it.
+    let next = tr.nextSibling;
+    while (next && next.nodeType === 3) next = next.nextSibling; // skip text nodes
+    if (!next || !next.classList) return false;
+    return next.classList.contains("finding-annotation") || next.classList.contains("comment-widget");
+  }
+
+  function createCollapsedBar(hiddenRows) {
+    const tr = document.createElement("tr");
+    tr.className = "diff-collapsed-bar";
+    const td = document.createElement("td");
+    td.colSpan = 3;
+    const inner = document.createElement("div");
+    inner.className = "diff-collapsed-inner";
+
+    const upBtn = document.createElement("button");
+    upBtn.className = "diff-collapsed-btn";
+    upBtn.title = "Show the 50 lines just before the visible chunk below";
+    upBtn.textContent = "↑ 50 lines";
+
+    const allBtn = document.createElement("button");
+    allBtn.className = "diff-collapsed-btn all";
+    allBtn.textContent = `↕ Show all ${hiddenRows.length} hidden lines`;
+
+    const downBtn = document.createElement("button");
+    downBtn.className = "diff-collapsed-btn";
+    downBtn.title = "Show the 50 lines just after the visible chunk above";
+    downBtn.textContent = "50 lines ↓";
+
+    inner.append(upBtn, allBtn, downBtn);
+    td.appendChild(inner);
+    tr.appendChild(td);
+
+    tr._hiddenRows = hiddenRows.slice();
+
+    upBtn.addEventListener("click", () => expandFromCollapsed(tr, "up", 50));
+    allBtn.addEventListener("click", () => expandFromCollapsed(tr, "all", null));
+    downBtn.addEventListener("click", () => expandFromCollapsed(tr, "down", 50));
+    return tr;
+  }
+
+  function expandFromCollapsed(barTr, direction, count) {
+    const hidden = barTr._hiddenRows || [];
+    if (hidden.length === 0) { barTr.remove(); return; }
+
+    // Detect if this bar is at the END of the diff (no visible diff-row after it).
+    // For end-of-diff bars, the user's reading anchor is the chunk ABOVE — so `up`
+    // should reveal lines closest to that anchor (FIRST of hidden). For top/middle
+    // bars, the anchor is the next chunk BELOW — so `up` reveals LAST of hidden.
+    let isAtEnd = true;
+    let next = barTr.nextSibling;
+    while (next) {
+      if (next.classList && next.classList.contains("diff-row")) { isAtEnd = false; break; }
+      next = next.nextSibling;
+    }
+
+    let toReveal = [], remaining = hidden;
+    let insertAfterBar = false;
+
+    if (direction === "all") {
+      toReveal = hidden; remaining = []; insertAfterBar = false;
+    } else if (direction === "up") {
+      if (isAtEnd) {
+        // Bottom bar: anchor is prev chunk above. Reveal FIRST 50 (closest to anchor),
+        // insert BEFORE bar so revealed lines sit just after the previous chunk.
+        toReveal = hidden.slice(0, count); remaining = hidden.slice(count);
+        insertAfterBar = false;
+      } else {
+        // Top/middle bar: anchor is next chunk below. Reveal LAST 50 (closest to anchor),
+        // insert AFTER bar so revealed lines sit just before the next chunk.
+        toReveal = hidden.slice(-count); remaining = hidden.slice(0, -count);
+        insertAfterBar = true;
+      }
+    } else if (direction === "down") {
+      if (isAtEnd) {
+        // Bottom bar: `down` reveals the OTHER end (LAST of hidden = end of file),
+        // inserted AFTER the bar.
+        toReveal = hidden.slice(-count); remaining = hidden.slice(0, -count);
+        insertAfterBar = true;
+      } else {
+        // Top/middle bar: `down` reveals FIRST of hidden (top of file or just after
+        // prev chunk in middle case), inserted BEFORE the bar.
+        toReveal = hidden.slice(0, count); remaining = hidden.slice(count);
+        insertAfterBar = false;
+      }
+    }
+
+    if (insertAfterBar) {
+      const ref = barTr.nextSibling;
+      for (const r of toReveal) barTr.parentNode.insertBefore(r, ref);
+    } else {
+      for (const r of toReveal) barTr.parentNode.insertBefore(r, barTr);
+    }
+
+    if (remaining.length === 0) {
+      barTr.remove();
+    } else {
+      barTr._hiddenRows = remaining;
+      const allBtn = barTr.querySelector(".diff-collapsed-btn.all");
+      if (allBtn) allBtn.textContent = `↕ Show all ${remaining.length} hidden lines`;
+    }
+  }
+
+  function collapseLongContextRanges(diffSection) {
+    const tbody = diffSection.querySelector("tbody");
+    if (!tbody) return;
+    const KEEP = 3;       // rows kept on each side of any change
+    const THRESHOLD = 6;  // only collapse runs longer than this
+
+    // Build list of all rows in tbody, in order. Annotation / comment rows are ignored
+    // for run boundaries but they pin their anchor row as must-show.
+    const allRows = Array.from(tbody.children);
+
+    // Mark each diff row "must-show" if non-ctx, or if rowIsMustShow says so (annotation/comment after it).
+    const mustShow = new Set();
+    for (const r of allRows) {
+      if (!r.classList || !r.classList.contains("diff-row")) continue;
+      if (r.dataset.kind !== "ctx") mustShow.add(r);
+      else if (rowIsMustShow(r)) mustShow.add(r);
+    }
+
+    // Expand mustShow with KEEP rows on each side.
+    const diffRows = allRows.filter(r => r.classList && r.classList.contains("diff-row"));
+    const idxOf = new Map();
+    diffRows.forEach((r, i) => idxOf.set(r, i));
+    const expanded = new Set();
+    for (const r of mustShow) {
+      const i = idxOf.get(r);
+      for (let j = Math.max(0, i - KEEP); j <= Math.min(diffRows.length - 1, i + KEEP); j++) {
+        expanded.add(diffRows[j]);
+      }
+    }
+
+    // Walk diffRows in order; collect runs of consecutive ctx rows NOT in expanded.
+    let runStart = -1;
+    const runs = [];
+    for (let i = 0; i <= diffRows.length; i++) {
+      const r = diffRows[i];
+      const hideable = r && r.dataset.kind === "ctx" && !expanded.has(r);
+      if (hideable) {
+        if (runStart < 0) runStart = i;
+      } else {
+        if (runStart >= 0 && i - runStart > THRESHOLD) runs.push([runStart, i]);
+        runStart = -1;
+      }
+    }
+
+    // Collapse each run. Process from end to start so indices stay stable.
+    for (let k = runs.length - 1; k >= 0; k--) {
+      const [from, to] = runs[k];
+      const hidden = diffRows.slice(from, to);
+      const bar = createCollapsedBar(hidden);
+      tbody.insertBefore(bar, hidden[0]);
+      for (const h of hidden) h.remove();
+    }
+  }
+
+  document.querySelectorAll(".file-diff").forEach(collapseLongContextRanges);
+
+  // ───── feedback block + clipboard fallback ──────────────────────────────
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return "ok";
+    } catch (e) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch (_) {}
+      document.body.removeChild(ta);
+      if (ok) return "ok";
+      return "manual";
+    }
+  }
+
+  function showFallbackTextarea(text) {
+    const ta = document.createElement("textarea");
+    ta.className = "fallback-textarea";
+    ta.value = text;
+    ta.readOnly = true;
+    document.body.appendChild(ta);
+    ta.select();
+    setTimeout(() => ta.remove(), 30000);
+    return ta;
+  }
+
+  function buildFeedbackBlock() {
+    const findings = [];
+    document.querySelectorAll("tr[id^='finding-']").forEach(row => {
+      const id = row.dataset.findingId;
+      const status = state[id] || "open";
+      if (status !== "open") return;
+      const severity = row.dataset.severity;
+      const reviewers = row.dataset.reviewers || "";
+      const fileSection = row.closest(".file-section");
+      const file = fileSection ? (fileSection.querySelector(".file-path")?.textContent.trim() || "") : "";
+      const lineCell = row.querySelector(".col-line");
+      const lineSpec = lineCell ? lineCell.textContent.trim() : "";
+      const bodyCell = row.children[4];
+      let body = "";
+      if (bodyCell) {
+        const clone = bodyCell.cloneNode(true);
+        clone.querySelectorAll(".reason-inline").forEach(el => el.remove());
+        body = clone.textContent.trim().replace(/\s+/g, " ");
+      }
+      const fixCell = row.children[6];
+      const fix = fixCell ? fixCell.textContent.trim().replace(/\s+/g, " ") : "";
+      const note = reasons[id] || "";
+      findings.push({ kind: "finding", severity: severity.toUpperCase(), file, line: lineSpec, reviewers, body, fix, note });
+    });
+    const items = [
+      ...findings,
+      ...comments.map(c => ({ kind: "comment", severity: c.severity, file: c.file, line: String(c.line), body: c.body }))
+    ];
+    const order = ["CRITICAL","HIGH","MEDIUM","LOW","NIT"];
+    const buckets = Object.fromEntries(order.map(s => [s, []]));
+    for (const it of items) (buckets[it.severity] || buckets.MEDIUM).push(it);
+
+    const title = document.title || "review-swarm report";
+    const lines = [
+      `# Review feedback to address — ${title}`,
+      `Generated ${new Date().toISOString()} from review-swarm report \`${REPORT_FILENAME}\`.`,
+      ""
+    ];
+    const labels = { CRITICAL: "Critical", HIGH: "High priority", MEDIUM: "Medium priority", LOW: "Low priority", NIT: "Nits" };
+    let total = 0;
+    for (const sev of order) {
+      if (buckets[sev].length === 0) continue;
+      lines.push(`## ${labels[sev]}`);
+      for (const it of buckets[sev]) {
+        const tag = it.kind === "comment" ? "*my note*" : `*finding from ${it.reviewers.replace(/,/g, " + ")}*`;
+        lines.push(`- **${it.file}:${it.line}** — ${tag}`);
+        lines.push(`  ${it.body}`);
+        if (it.fix) lines.push(`  *Suggested fix:* ${it.fix}`);
+        if (it.note) lines.push(`  *My direction:* ${it.note}`);
+        lines.push("");
+        total++;
+      }
+    }
+    lines.push("---");
+    lines.push(`After fixing, reopen the report and click "Re-grade" to see the updated verdict.`);
+    return { text: lines.join("\n"), count: total };
+  }
+
+  function updateOpenCount() {
+    let count = 0;
+    document.querySelectorAll("tr[id^='finding-']").forEach(row => {
+      const id = row.dataset.findingId;
+      const status = state[id] || "open";
+      if (status === "open") count++;
+    });
+    count += comments.length;
+    document.querySelectorAll("[data-open-count]").forEach(el => { el.textContent = String(count); });
+  }
+
+  document.getElementById("copy-feedback-btn")?.addEventListener("click", async () => {
+    const { text, count } = buildFeedbackBlock();
+    const status = document.getElementById("action-status");
+    if (count === 0) { status.textContent = "Nothing to copy — no open findings or comments."; return; }
+    const result = await copyToClipboard(text);
+    if (result === "ok") {
+      status.textContent = `Copied — ${count} items`;
+      status.classList.add("flash");
+      setTimeout(() => { status.classList.remove("flash"); status.textContent = ""; }, 2000);
+    } else {
+      status.textContent = "Press Cmd+C — text is selected";
+      showFallbackTextarea(text);
+    }
+  });
+
+  // Update open-count whenever a status changes — observe the existing delegated handler.
+  document.body.addEventListener("click", e => {
+    if (e.target.closest(".status-btn")) {
+      setTimeout(updateOpenCount, 0); // run after the existing handler updates state
+    }
+  });
+  updateOpenCount();
+
+  // ───── re-grade ──────────────────────────────────────────────────────────
+  function reviewerGrade(severities) {
+    const counts = { critical: 0, high: 0, medium: 0, low: 0, nit: 0 };
+    for (const s of severities) counts[s] = (counts[s] || 0) + 1;
+    if (counts.critical) return "F";
+    if (counts.high >= 2) return "C";
+    if (counts.high === 1) return "C+";
+    if (counts.medium >= 3) return "B";
+    if (counts.medium >= 1) return "B+";
+    if (counts.low >= 1) return "A-";
+    return "A";
+  }
+
+  function overallVerdict(severities) {
+    const counts = { critical: 0, high: 0, medium: 0, low: 0, nit: 0 };
+    for (const s of severities) counts[s] = (counts[s] || 0) + 1;
+    if (counts.critical) return { risk: "CRITICAL", emoji: "🚫", text: "BLOCKED", grade: "F", gradeClass: "f" };
+    if (counts.high >= 2 || (counts.high === 1 && counts.medium >= 2)) return { risk: "HIGH", emoji: "⚠", text: "REQUEST CHANGES", grade: "C", gradeClass: "c" };
+    if (counts.high === 1 || counts.medium >= 3) return { risk: "MEDIUM", emoji: "💬", text: "APPROVE WITH NITS", grade: "B+", gradeClass: "b-plus" };
+    return { risk: "LOW", emoji: "✅", text: "APPROVE", grade: "A", gradeClass: "a" };
+  }
+
+  function regrade() {
+    const openFindings = []; // array of { reviewer, severity }
+    document.querySelectorAll("tr[id^='finding-']").forEach(row => {
+      const id = row.dataset.findingId;
+      const status = state[id] || "open";
+      if (status !== "open") return;
+      const severity = row.dataset.severity;
+      const reviewers = (row.dataset.reviewers || "").split(",").map(r => r.trim()).filter(Boolean);
+      for (const r of reviewers) openFindings.push({ reviewer: r, severity });
+    });
+
+    // Per-reviewer grade.
+    const byReviewer = {};
+    for (const f of openFindings) (byReviewer[f.reviewer] = byReviewer[f.reviewer] || []).push(f.severity);
+    document.querySelectorAll(".reviewer-row").forEach(row => {
+      const reviewer = row.dataset.reviewer;
+      if (!reviewer) return;
+      const cell = row.querySelector(".reviewer-grade");
+      if (!cell) return;
+      cell.textContent = reviewerGrade(byReviewer[reviewer] || []);
+    });
+
+    // Overall verdict.
+    const v = overallVerdict(openFindings.map(f => f.severity));
+    const banner = document.querySelector(".verdict-banner");
+    if (banner) {
+      banner.className = banner.className.replace(/grade-[a-z-]+/g, "").trim() + ` grade-${v.gradeClass}`;
+      const emojiEl = banner.querySelector(".verdict-emoji");
+      if (emojiEl) emojiEl.textContent = v.emoji;
+      const textEl = banner.querySelector(".verdict-text");
+      if (textEl) textEl.textContent = v.text;
+      const gradeEl = banner.querySelector(".grade-letter");
+      if (gradeEl) gradeEl.textContent = v.grade;
+      banner.classList.remove("flash");
+      void banner.offsetWidth; // restart animation
+      banner.classList.add("flash");
+
+      if (openFindings.length === 0) {
+        const rationale = banner.querySelector(".verdict-rationale");
+        if (rationale) rationale.textContent = "All findings resolved — re-graded as ✅ APPROVE (A). Re-running /review-swarm would restart from a fresh diff.";
+      }
+    }
+
+    const status = document.getElementById("action-status");
+    if (status) {
+      status.textContent = "Re-graded ✓";
+      status.classList.add("flash");
+      setTimeout(() => { status.classList.remove("flash"); status.textContent = ""; }, 2000);
+    }
+  }
+
+  document.getElementById("regrade-btn")?.addEventListener("click", regrade);
+})();
+</script>
+</body>
+</html>

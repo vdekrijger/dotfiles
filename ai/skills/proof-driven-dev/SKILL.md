@@ -1,6 +1,6 @@
 ---
 name: proof-driven-dev
-description: End-to-end proof-driven development pipeline. Brainstorm, extract criteria, implement, verify with proof, human checkpoint, review-swarm hardening loop (until A-), final verify, PR with proof. Use when starting any feature from scratch and you want full traceability from spec to proof of work.
+description: End-to-end proof-driven development pipeline. Brainstorm, extract criteria, implement, verify with proof, human checkpoint, review-swarm hardening loop (until A-), final verify, PR with proof, CI monitoring. Use when starting any feature from scratch and you want full traceability from spec to proof of work.
 ---
 
 # Proof-Driven Development
@@ -30,7 +30,12 @@ digraph proof_driven {
     "Escalate to human" [shape=box];
     "8. Final Verify" [shape=box];
     "9. Create PR with Proof" [shape=box];
-    "10. Human Final Review" [shape=doublecircle];
+    "10. CI Monitor" [shape=box];
+    "CI green?" [shape=diamond];
+    "Fix CI + bot comments" [shape=box];
+    "Needs human input?" [shape=diamond];
+    "Ask human" [shape=box];
+    "11. Human Final Review" [shape=doublecircle];
 
     "1. Brainstorm + Spec" -> "2. Extract Criteria";
     "2. Extract Criteria" -> "3. Write Plan";
@@ -47,9 +52,16 @@ digraph proof_driven {
     "Fix findings + re-verify" -> "Pass cap hit?";
     "Pass cap hit?" -> "Escalate to human" [label="yes (2+ passes)"];
     "Pass cap hit?" -> "7. Review-Swarm Loop" [label="no"];
-    "Escalate to human" -> "10. Human Final Review";
+    "Escalate to human" -> "11. Human Final Review";
     "8. Final Verify" -> "9. Create PR with Proof";
-    "9. Create PR with Proof" -> "10. Human Final Review";
+    "9. Create PR with Proof" -> "10. CI Monitor";
+    "10. CI Monitor" -> "CI green?";
+    "CI green?" -> "11. Human Final Review" [label="yes, no bot comments"];
+    "CI green?" -> "Fix CI + bot comments" [label="no"];
+    "Fix CI + bot comments" -> "Needs human input?";
+    "Needs human input?" -> "Ask human" [label="yes"];
+    "Needs human input?" -> "10. CI Monitor" [label="no, push fix"];
+    "Ask human" -> "10. CI Monitor" [label="resolved"];
 }
 ```
 
@@ -171,9 +183,67 @@ nothing broke during hardening.
 4. Enhance with proof sections using `references/pr-proof-template.md`
 5. Create the PR via `gh pr create`
 
-## Phase 10: Human Final Review
+## Phase 10: CI Monitor + Bot Comments
 
-Present the PR link. The human reviews, optionally runs
+After the PR is created, monitor CI and address bot comments before
+handing off to the human.
+
+**CI Monitoring Loop:**
+
+1. Poll CI status: `gh pr checks {PR_NUMBER} --watch`
+2. If all checks pass and no bot comments need addressing: continue to
+   Phase 11
+3. If a check fails:
+   a. Read the failure logs: `gh pr checks {PR_NUMBER}` to identify the
+      failing check, then fetch its logs
+   b. Classify the failure:
+      - **Auto-fixable** (lint error, type error, formatting, test
+        failure in code you wrote): fix it, re-run the verify script to
+        catch regressions, push
+      - **Needs human input** (flaky test you didn't write, infra issue,
+        CI config problem, permission issue): surface to the human with
+        the failure details and ask for guidance
+   c. After pushing fixes, return to step 1
+
+**Bot Comment Handling:**
+
+After CI passes (or in parallel), check for bot comments on the PR:
+`gh api repos/{OWNER}/{REPO}/pulls/{PR_NUMBER}/comments`
+
+For each bot comment:
+1. **Actionable and auto-fixable** (linter suggestions, security scanner
+   findings in your code, coverage threshold warnings): fix, push, re-poll
+2. **Actionable but needs judgment** (dependency upgrade suggestion,
+   architectural concern from a static analysis bot): surface to the
+   human with context and your recommendation
+3. **Informational only** (deploy preview links, changelog generation,
+   size reports): note and move on
+
+**Escalation prompt for human input:**
+
+```
+[proof-driven-dev] CI/bot comment needs your input:
+
+  Check: {CHECK_NAME}
+  Status: {FAILING / BOT_COMMENT}
+  Details: {SUMMARY_OF_ISSUE}
+
+  My assessment: {YOUR_ANALYSIS}
+  Recommended action: {WHAT_YOU_THINK_SHOULD_HAPPEN}
+
+  What would you like me to do?
+```
+
+**Safety rules:**
+- Re-run the verify script after every CI fix push to catch regressions
+- Never force-push to fix CI — always add new commits
+- After 3 fix-push cycles on the same check, escalate to the human
+  rather than looping (the fix might be making things worse)
+- Never dismiss or resolve bot comments without addressing them
+
+## Phase 11: Human Final Review
+
+Present the PR link with CI status. The human reviews, optionally runs
 `./scripts/verify-<topic>.sh` for independent confirmation, and opens
 for internal review when satisfied.
 

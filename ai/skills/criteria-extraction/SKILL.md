@@ -66,20 +66,47 @@ After the subagent returns, check:
 If gaps exist, re-dispatch the subagent with specific instructions about
 what was missed.
 
-### Step 4: Write and commit
+### Step 4: Proportionality check
+
+Before writing, sanity-check the edge case count against feature
+complexity:
+
+| Feature complexity | Expected edge cases per REQ | Total ceiling |
+|---|---|---|
+| Simple (CRUD, config, single form) | 3-5 | ~20 |
+| Medium (multi-step flow, integrations) | 5-10 | ~50 |
+| Complex (real-time, concurrent, multi-system) | 10-15 | ~80 |
+
+If the matrix significantly exceeds the ceiling:
+
+1. Present the summary to the human:
+   ```
+   [criteria-extraction] Matrix has {N} edge cases for {M} requirements.
+     This seems high for a {COMPLEXITY} feature (ceiling: ~{CEILING}).
+     Would you like to triage edge cases into must-have vs nice-to-have?
+   ```
+2. If the human says yes: present edge cases grouped by requirement.
+   The human marks each as `must-have` or `nice-to-have`.
+3. Add a `priority` field to each edge case in the matrix:
+   - `must-have` — blocks verification (shows as UNCOVERED if no test)
+   - `nice-to-have` — tracked but non-blocking (shows as OPTIONAL)
+4. If the human says no (accepts all): proceed with all edge cases as
+   `must-have`.
+
+### Step 5: Write and commit
 
 Write the criteria matrix to the same directory as the spec:
 `<spec-dir>/YYYY-MM-DD-<topic>-criteria-matrix.md`
 
 Commit with message: `Add criteria matrix for <topic>`
 
-### Step 5: Report to caller
+### Step 6: Report to caller
 
 Print the summary:
 ```
 [criteria-extraction] Matrix written to <path>
   Requirements: N
-  Edge cases: N
+  Edge cases: N (M must-have, K nice-to-have)
   Proof types: N test-only, N visual, N visual-flow, N manual
 ```
 
@@ -90,6 +117,10 @@ Print the summary:
 - **Never skip the edge case checklist.** Every category must be
   evaluated against every requirement. Over-generation is acceptable;
   under-generation is not.
+- **Proportionality matters.** Over-generation is acceptable at the
+  extraction stage, but the human must have the chance to triage before
+  implementation. A simple feature buried under 60 edge cases wastes
+  implementation time.
 - **Fresh eyes only.** The test architect subagent must NOT receive
   the conversation history. It reads the spec cold, like an external
   QA engineer.

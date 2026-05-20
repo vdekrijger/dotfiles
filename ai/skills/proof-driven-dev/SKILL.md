@@ -1,6 +1,6 @@
 ---
 name: proof-driven-dev
-description: End-to-end proof-driven development pipeline. Brainstorm, extract criteria, implement, verify with proof, human checkpoint, review-swarm hardening loop (until A-), final verify, PR with proof, CI monitoring. Use when starting any feature from scratch and you want full traceability from spec to proof of work.
+description: End-to-end proof-driven development pipeline with two modes — full (brainstorm through proof-of-work PR) for features, lightweight (implement, test, review, ship) for quick fixes. Use when starting any feature or fix and you want traceability from spec to proof of work.
 ---
 
 # Proof-Driven Development
@@ -9,7 +9,59 @@ Build a feature from idea to merge-ready PR with full proof of work.
 Every requirement traced from spec to criteria to tests to verification
 report to PR.
 
-## Pipeline
+## Pipeline Modes
+
+The pipeline has two modes. Pick the right one — the full pipeline on a
+5-line bugfix wastes time, and lightweight mode on a complex feature
+misses edge cases.
+
+### Mode Selection
+
+Assess the change before starting:
+
+| Signal | Full mode | Lightweight mode |
+|--------|-----------|-----------------|
+| New feature or significant behavior change | yes | |
+| Touches 5+ files or 3+ modules | yes | |
+| Has UI that needs visual proof | yes | |
+| User explicitly requests full pipeline | yes | |
+| Bugfix with clear scope (1-3 files) | | yes |
+| Config change, copy change, dependency bump | | yes |
+| Refactor with existing test coverage | | yes |
+| Estimated implementation < 30 min | | yes |
+
+When in doubt, **ask the human** which mode. Don't guess on ambiguous cases.
+
+### Full Mode (default for features)
+
+All 11 phases. Brainstorm → criteria → plan → implement → verify →
+human checkpoint → review-swarm → final verify → PR → CI monitor →
+human review.
+
+### Lightweight Mode (for quick fixes)
+
+```
+1. Implement the fix (TDD — write failing test first)
+2. Run all tests
+3. Run /review-swarm --no-gate (single pass, no iteration loop)
+4. Fix any CRITICAL or HIGH findings
+5. Create PR (repo template, no proof artifacts)
+6. Monitor CI + bot comments
+7. Human final review
+```
+
+Lightweight mode skips: brainstorming, criteria extraction, formal
+verification report, human checkpoint, review-swarm iteration loop,
+visual proof capture. It still uses TDD, still runs review-swarm once,
+and still monitors CI.
+
+**Upgrading mid-flight:** If during lightweight mode you discover the
+change is more complex than expected (scope grows, edge cases multiply),
+stop and say so. The human can choose to upgrade to full mode — which
+means going back and writing a spec + criteria matrix for the expanded
+scope.
+
+## Full Mode Pipeline
 
 ```dot
 digraph proof_driven {
@@ -83,6 +135,29 @@ Review the matrix output. If any requirement seems under-specified in
 edge cases, re-dispatch the test architect with guidance on what to
 probe deeper.
 
+### Proportionality Gate
+
+After the matrix is produced, sanity-check the ratio of edge cases to
+requirements. Guidelines:
+
+| Feature complexity | Expected edge cases per REQ | Total matrix ceiling |
+|---|---|---|
+| Simple (CRUD, config, single form) | 3-5 | ~20 |
+| Medium (multi-step flow, integrations) | 5-10 | ~50 |
+| Complex (real-time, concurrent, multi-system) | 10-15 | ~80 |
+
+If the matrix significantly exceeds the ceiling for the feature's
+complexity, it's over-generating. Before proceeding:
+
+1. Present the matrix summary to the human
+2. Ask them to mark edge cases as **must-have** vs **nice-to-have**
+3. Must-have cases become the implementation contract
+4. Nice-to-have cases are tracked but don't block verification —
+   they show as `OPTIONAL` in the report rather than `UNCOVERED`
+
+This prevents a simple "add a settings page" from generating 60 edge
+cases that each need a test.
+
 ## Phase 3: Write Plan
 
 **Invoke:** `superpowers:writing-plans`
@@ -148,6 +223,28 @@ Run review-swarm in an iteration loop targeting grade A-.
    c. If verify fails: fix the regression first
    d. Commit the fixes
    e. Go to step 1
+
+**Change-size circuit breaker:** Before applying a fix for any finding,
+compare the fix size to the finding scope. If the fix:
+- Touches more files than the finding references, OR
+- Adds more lines than the finding complained about, OR
+- Introduces a new abstraction (helper, wrapper, utility) that didn't
+  exist before
+
+Then STOP and surface it to the human before applying:
+
+```
+[proof-driven-dev] Review-swarm fix seems disproportionate:
+
+  Finding: {FINDING_SUMMARY} (severity: {SEVERITY})
+  Proposed fix: {FIX_SUMMARY}
+  Fix scope: {N files, M lines added}
+
+  This fix is larger than the issue it addresses. Apply it, skip it,
+  or simplify?
+```
+
+This prevents the "fix a nit by adding an abstraction layer" trap.
 
 **Pass cap:** After 2 full review-swarm passes with grade still below
 A-, escalate to the human:

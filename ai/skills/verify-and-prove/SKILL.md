@@ -56,7 +56,8 @@ digraph verify {
 ### Full Mode
 
 1. **Parse the criteria matrix.** Load all REQ and EC items with their
-   proof types.
+   proof types and priority (`must-have` or `nice-to-have`). If no
+   priority field exists, treat all items as `must-have`.
 
 2. **Map requirements to tests.** For each item, find the test(s) that
    cover it. Search strategies (in order):
@@ -64,7 +65,8 @@ digraph verify {
    - Test name describes the same behavior (grep test files for keywords
      from the requirement description)
    - Test file covers the same module/function being tested
-   - If no test found: mark as UNCOVERED
+   - If no test found and priority is `must-have`: mark as UNCOVERED
+   - If no test found and priority is `nice-to-have`: mark as OPTIONAL
 
 3. **Generate the verify script.** Read `references/verify-script-template.sh`.
    Fill in the placeholders:
@@ -117,10 +119,19 @@ digraph verify {
    UNCOVERED:
      - EC-01e: <description>
 
+   OPTIONAL:
+     - EC-02c: <description> (nice-to-have, no test)
+
    SUMMARY:
-     total: N | pass: N | fail: N | uncovered: N
+     total: N | pass: N | fail: N | uncovered: N | optional: N
      visual_artifacts: N screenshots, N gifs
    ```
+
+   **Status determination:**
+   - `PASS` — all must-have items pass, zero uncovered
+   - `FAIL` — any must-have item fails
+   - `PARTIAL` — all must-have items pass but some are uncovered
+   - Optional (nice-to-have) items never affect overall status
 
    Write to `<report-dir>/YYYY-MM-DD-<topic>-report.md`.
 
@@ -149,7 +160,7 @@ Print summary to the caller:
 ```
 [verify-and-prove] Verification complete
   Status: PASS | FAIL | PARTIAL
-  Results: N/N pass, N fail, N uncovered
+  Results: N/N pass, N fail, N uncovered, N optional
   Report: <report path>
   Script: <script path>
   Visuals: N screenshots, N gifs

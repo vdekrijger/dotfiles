@@ -66,3 +66,47 @@ docs/superpowers/verification/
 ```
 
 Paths are project-configurable — use whatever directory the caller specifies.
+
+## Autonomous / Headless Mode (proof-capture)
+
+When running inside the autonomous pipeline (`claude -p` subprocess, no
+interactive session), Claude in Chrome and `gif_creator` are unavailable.
+Use `proof-capture` instead — it produces identical artifacts via headless
+Playwright.
+
+Install from dotfiles: `bash ~/dotfiles/ai/tools/proof-capture/install.sh`
+
+**Screenshots → proof-capture screenshot:**
+```bash
+proof-capture screenshot \
+  --url http://localhost:8000/insights \
+  --output proof/req-01-insights-list.png \
+  --wait-selector '[data-attr="insight-card"]'
+```
+
+**GIF recordings → proof-capture record (WebM):**
+```bash
+proof-capture record \
+  --url http://localhost:8000/insights \
+  --output proof/req-02-bulk-delete-flow.webm \
+  --duration 15 \
+  --script proof/scripts/bulk-delete-flow.js
+```
+
+GitHub renders WebM inline in PR bodies — functionally equivalent to GIFs
+and smaller. The PR template references these via raw GitHub URLs.
+
+**Multi-step flows → proof-capture flow:**
+```bash
+proof-capture flow \
+  --url http://localhost:8000/insights \
+  --script proof/scripts/bulk-delete-flow.js \
+  --output-dir proof/screenshots/
+```
+
+Flow scripts export an array of `{ name, action(page) }` steps using the
+Playwright API. Each step produces a numbered PNG.
+
+**Graceful degradation:** same rule applies — if proof-capture fails
+(Chromium crash, page unreachable), log a warning and mark visual items
+as `SKIPPED` in the report. Do not fail verification.

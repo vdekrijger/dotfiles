@@ -176,16 +176,27 @@ def gh(*args: str) -> dict | list | None:
 
 def discover_prs(repo: str, since: str, until: str | None, limit: int, author: str | None = None) -> list[int]:
     """Find merged PRs authored by user since date."""
-    search_query = f"repo:{repo} is:pr is:merged merged:>={since}"
+    search_query = f"is:merged merged:>={since}"
     if author:
         search_query += f" author:{author}"
     if until:
         search_query += f" merged:<={until}"
 
-    result = gh("search", "prs", search_query, "--limit", str(limit), "--json", "number")
+    result = gh("pr", "list", "--repo", repo, "--search", search_query,
+                "--limit", str(limit), "--json", "number", "--state", "merged")
     if not result:
         return []
-    return sorted([pr["number"] for pr in result])
+    if isinstance(result, list):
+        return sorted([pr["number"] for pr in result])
+    return []
+
+
+def get_pr_author(repo: str, pr_number: int) -> str:
+    """Get the PR author's login."""
+    result = gh("pr", "view", str(pr_number), "--repo", repo, "--json", "author")
+    if not result or not isinstance(result, dict):
+        return ""
+    return result.get("author", {}).get("login", "")
 
 
 def fetch_reviews(repo: str, pr_number: int) -> list[dict]:
@@ -262,6 +273,19 @@ def classify_comment(body: str) -> tuple[str, str, bool, str]:
 def mine_pr(repo: str, pr_number: int) -> list[ClassifiedItem]:
     """Mine a single PR for feedback."""
     items: list[ClassifiedItem] = []
+    pr_author = get_pr_author(repo, pr_number)
+    min_body_len = 20  # skip very short comments
+
+    def _should_skip(login: str, assoc: str, body: str) -> bool:
+        if is_bot(login, assoc):
+            return True
+        if login == pr_author:
+            return True  # skip self-reviews
+        if len(body.strip()) < min_body_len:
+            return True
+        if body.strip().lower() in ("lgtm", "+1", "👍", "looks good", "approved"):
+            return True
+        return False
 
     # Reviews (body text in review submissions)
     reviews = fetch_reviews(repo, pr_number)
@@ -269,12 +293,7 @@ def mine_pr(repo: str, pr_number: int) -> list[ClassifiedItem]:
         login = review.get("user", {}).get("login", "")
         assoc = review.get("author_association", "")
         body = review.get("body", "") or ""
-        if is_bot(login, assoc):
-            continue
-        if not body.strip():
-            continue
-        # Skip approval stamps
-        if body.strip().lower() in ("lgtm", "+1", "👍", "looks good", "approved"):
+        if _should_skip(login, assoc, body):
             continue
 
         fb = FeedbackItem(
@@ -295,11 +314,7 @@ def mine_pr(repo: str, pr_number: int) -> list[ClassifiedItem]:
         login = comment.get("user", {}).get("login", "")
         assoc = comment.get("author_association", "")
         body = comment.get("body", "") or ""
-        if is_bot(login, assoc):
-            continue
-        if not body.strip():
-            continue
-        if body.strip().lower() in ("lgtm", "+1", "👍"):
+        if _should_skip(login, assoc, body):
             continue
 
         fb = FeedbackItem(
@@ -320,11 +335,7 @@ def mine_pr(repo: str, pr_number: int) -> list[ClassifiedItem]:
         login = comment.get("user", {}).get("login", "")
         assoc = comment.get("author_association", "")
         body = comment.get("body", "") or ""
-        if is_bot(login, assoc):
-            continue
-        if not body.strip():
-            continue
-        if body.strip().lower() in ("lgtm", "+1", "👍"):
+        if _should_skip(login, assoc, body):
             continue
 
         fb = FeedbackItem(

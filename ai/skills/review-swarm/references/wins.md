@@ -49,3 +49,23 @@ PR #56706 (mcp-alert-slack-recipe). v2 review-swarm pass after the v1 scope fix 
   Location: products/alerts/mcp/tools.yaml:30
   Marked WIN. Note: XP lane was right that the duplication-for-discoverability tradeoff was worse than the duplication. Consolidating to one canonical recipe + short pointers from the other tools made the descriptions cleaner AND closed the drift risk. Pattern: agent-prompt discoverability claims need to be balanced against magic-string drift across yaml + product code.
 
+## 2026-05-29 — posthog — pr-feedback-miner (14-day scan: PRs #53837–#60399)
+
+Mined 9 merged PRs for human review feedback. Filtered out self-reviews and bot comments. Key patterns below.
+
+- Finding (vasco, HIGH): Comment discipline — 5+ instances across PRs #59625, #59624 where the user had to tell the agent to remove or simplify verbose comments. Pattern: "simplify this comment", "remove this comment", "no need for this verbosity", "focus on the WHY", "it's implicit". The agent writes multi-line doc-blocks and commit-message-style inline comments on functions whose purpose is already clear from the code.
+  Location: PR #59625 (AI credit budget gate), PR #59624 (freemium subscriptions)
+  Marked WIN. Note: This is the single highest-frequency pattern — the user corrects it in nearly every agent-authored PR. vasco-reviewer priority #14 (comment discipline) added to catch this. The rule: a comment is only worth keeping if it explains what the code cannot express.
+
+- Finding (vasco, MEDIUM): Missing actionable links from error states. PR #59625 added an AI credit budget gate that silences summaries when over budget. Human reviewer flagged that the error message told users what happened but didn't link them to Billing to fix it. Slack and email reports now include a link. Pattern: when an error state has a resolution path (settings page, billing page, docs), include the link.
+  Location: PR #59625 (MattPua review comment)
+  Marked WIN. Note: vasco-reviewer priority #15 (UX: actionable error recovery) added to catch this proactively.
+
+- Finding (vasco, LOW): Test type appropriateness — human reviewer questioned whether a Playwright (full-browser) test was justified vs a simpler component test. Agent had added Playwright test + screenshots as proof-of-work to a feature PR; reviewer correctly identified it as overkill for the behavior being tested.
+  Location: PR #59624 (MattPua review comment: "non blocker: is this a test thats worth having as playwright test?")
+  Marked WIN. Note: vasco-reviewer priority #3 (meaningful assertions) already covers this — the Playwright test would have passed with an empty implementation of the underlying logic. The win is validating that the existing rule catches this pattern.
+
+- Finding (vasco, MEDIUM): Scope discipline — agent regenerated `schema.json` / `schema.py` alongside a comment-only change. User flagged it as unnecessary diff noise.
+  Location: PR #59624
+  Marked WIN. Note: vasco-reviewer priority #4 (scope discipline) covers this — accidental regenerated files in a PR. Keep raising it.
+

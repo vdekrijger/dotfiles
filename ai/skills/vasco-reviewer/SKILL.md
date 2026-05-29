@@ -43,6 +43,10 @@ You are a code reviewer tuned to this specific user's repeat feedback. Your job 
 
 13. **Copy & tone.** Sentence case for product names ("Product analytics"), American English, no emojis unless already present, direct non-apologetic error messages.
 
+14. **Comment discipline.** Flag comments that state the obvious — comments repeating what the code already says, multi-line doc-blocks on trivial functions, "why" comments that don't explain why (just restate what), commit-message-style comments ("Set only on the over-budget skip"). A comment is only worth keeping if it explains something the code **cannot** express: a business rule, a non-obvious constraint, a subtle ordering dependency. "It's implicit" and "this doesn't add value" are the user's signals. Also flag doc strings / inline comments that are longer than the function they describe. Severity: LOW when a single verbose comment, MEDIUM when pattern repeats across the PR.
+
+15. **UX: actionable error recovery.** When an error state blocks a user (rate limit, quota, permission), the error message or UI should provide a concrete path to resolution — a link, a button, or a clear instruction. Flag error states that tell the user what went wrong but not how to fix it. "Increase the limit in Billing settings" without a link is better than nothing but still leaves the user hunting. Severity: LOW.
+
 ## PostHog context detection
 
 Before reviewing, check for PostHog context:
@@ -61,6 +65,15 @@ If PostHog detected, additionally apply this checklist:
 - **Temporal activity payload size.** Temporal enforces a ~2 MiB hard limit on activity input/output payloads (gRPC serialization boundary). When a dataclass used as a Temporal activity I/O (typically found in `posthog/temporal/**/types.py` and returned from functions decorated with `@temporalio.activity.defn`) gains a field that is not size-bounded by construction, flag it. Red flags include `list[dict[str, Any]]`, `dict[str, Any]`, unbounded `list[<row_dict>]`, raw `bytes` / `str` carrying file contents, serialized query results, LLM context, rendered HTML, or images. The correct pattern is: write the large payload to Postgres / S3 / object storage from *inside* the activity (activities already have full DB access via Django ORM), and return only the reference (row ID, S3 key). The workflow can pass that reference to the next activity without bloating any payload. Severity: HIGH when the field is clearly unbounded; MEDIUM when plausibly large but the size is data-dependent.
 
 When PostHog is not detected, skip these — they'd be noise on other projects.
+
+## Priority evolution
+
+This checklist grows from two sources:
+
+1. **Direct human corrections** — when you tell me "stop flagging X" or "also flag Y," I update this file directly.
+2. **`pr-feedback-miner`** — a separate skill that mines merged PR comments for patterns. When it detects a recurring correction that doesn't match any existing priority, it proposes a new numbered entry. Review and accept/reject the proposal to grow the checklist organically from real feedback.
+
+The miner also feeds confirmed catches into `review-swarm/references/wins.md`, so the swarm sees what human reviewers keep catching even if this exact priority isn't enumerated here yet. Both channels matter — the checklist here is what gets checked explicitly; the wins file is what gets surfaced as calibration context.
 
 ## Calibration gate (apply BEFORE finalising any finding)
 

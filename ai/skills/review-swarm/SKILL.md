@@ -518,6 +518,10 @@ Both files are append-only and are only written by their respective stages. Manu
 
 The Stage 2 prompt builder reads up to the last 10 entries per reviewer from each file (most recent first) and emits the two prompt blocks side-by-side under one `## Calibration` heading. If a reviewer has neither FPs nor wins, the entire `## Calibration` heading is omitted (same rule as today).
 
+### External calibration source
+
+The `pr-feedback-miner` skill (run it separately) feeds human PR review feedback into `wins.md` by classifying corrections from real PR comments into vasco-reviewer priorities. Run it weekly or after each PR lands to close the learning loop between human corrections and automated reviewer calibration. Entries from the miner carry the same format and are ingested identically by Stage 2 — reviewers don't know or care where the calibration came from.
+
 ## Stage 4: calibration prompt
 
 After printing the open command, prompt the user:

@@ -119,7 +119,9 @@ digraph proof_driven {
 
 ## Phase 1: Brainstorm + Spec
 
-**Invoke:** `superpowers:brainstorming`
+**Invoke:** `brainstorming` skill
+
+Note: In Hermes, Superpowers skills installed from `obra/superpowers` are exposed by their unqualified skill names via `skills.external_dirs` (for example `brainstorming`, not `superpowers:brainstorming`).
 
 Follow the full brainstorming flow — explore context, ask clarifying
 questions one at a time, propose approaches, present design, write spec.
@@ -160,14 +162,14 @@ cases that each need a test.
 
 ## Phase 3: Write Plan
 
-**Invoke:** `superpowers:writing-plans`
+**Invoke:** `writing-plans` skill
 
 Create the implementation plan. The plan must reference criteria matrix
 IDs — each task should state which REQ/EC items it satisfies.
 
 ## Phase 4: Implement
 
-**Invoke:** `superpowers:subagent-driven-development`
+**Invoke:** `subagent-driven-development` skill
 
 Execute the plan task-by-task. The criteria matrix is provided to the
 spec reviewer so it checks against testable criteria, not just prose.
@@ -343,6 +345,34 @@ For each bot comment:
 Present the PR link with CI status. The human reviews, optionally runs
 `./scripts/verify-<topic>.sh` for independent confirmation, and opens
 for internal review when satisfied.
+
+## Phase 12: Maintenance — Feedback Loop (runs after PR lands)
+
+After the PR is merged and human review feedback arrives, close the
+learning loop:
+
+1. **Single-PR mining:** After a PR lands with reviewer feedback, run:
+   ```
+   pr-feedback-miner --local --pr <merged-number>
+   ```
+   This classifies every human correction and generates WIN entries for
+   the review-swarm calibration system.
+
+2. **Periodic bulk mining:** Weekly (or after a batch of PRs land):
+   ```
+   pr-feedback-miner --local --since last-week --auto-apply
+   ```
+   Scans all recently merged PRs, identifies recurring patterns, and
+   proposes vasco-reviewer priority updates.
+
+3. **Apply calibration:** Review the miner's report. Apply WIN entries
+   to `review-swarm/references/wins.md` and proposed updates to
+   `vasco-reviewer/SKILL.md`. The next review-swarm run automatically
+   picks up the new calibration.
+
+This phase is what turns human review feedback into a durable
+improvement signal — every correction the human makes once should never
+need to be made again.
 
 ## Rules
 

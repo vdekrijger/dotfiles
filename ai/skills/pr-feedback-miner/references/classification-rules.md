@@ -129,6 +129,43 @@ in priority order — the first match wins.
 
 **Severity:** MEDIUM
 
+## Priority 14: Comment Discipline (added 2026-05-29 from miner run)
+
+**Triggers:**
+- "simplify this comment" / "trim this comment" / "remove this comment"
+- "no need for this verbosity" / "too verbose" / "unnecessary comment"
+- "focus on the WHY" / "the code already says this" / "this comment doesn't add value"
+- "it's implicit" / "self-documenting" / "comment is obvious"
+- "keep comments to the non-obvious why" / "why is this comment here"
+
+**Keywords:** simplify, trim, remove comment, verbose, verbosity, verbose comment,
+              implicit, obvious, self-documenting, doesn't add value, focus on the why,
+              unnecessary comment, comment is longer than
+
+**Severity:** MEDIUM (pattern repeats across PR) / LOW (single instance)
+
+**Note:** This is the single highest-frequency pattern from the 2026-05-29 miner
+scan — the user corrected agent-written comments in 5+ instances across 2 PRs.
+The agent writes multi-line doc-blocks and commit-message-style inline comments
+on functions whose purpose is already clear from the code.
+
+## Priority 15: UX — Actionable Error Recovery (added 2026-05-29 from miner run)
+
+**Triggers:**
+- "are we able to link them to" / "can we add a link to" / "where do they go from here"
+- "how would users fix this" / "what can they do about it"
+- "this should have a button" / "add a CTA" / "needs a resolution path"
+- "tells them what went wrong but not how to fix"
+
+**Keywords:** link to billing, link to settings, button to, resolve this,
+              how to fix, actionable, CTA, resolution path, next step,
+              increase the limit, contact support
+
+**Severity:** LOW
+
+**Note:** Caught during the 2026-05-29 miner scan from MattPua's review on PR #59625.
+Error states that tell users what broke but not how to resolve it are a recurring gap.
+
 ## PostHog-Specific Patterns
 
 ### `NodeKind.*` Constants

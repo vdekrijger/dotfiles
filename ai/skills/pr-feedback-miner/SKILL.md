@@ -266,3 +266,30 @@ pr-feedback-miner --local --pr <just-merged-number>
   (dependabot, codecov, etc.) or the comment contains only CI artifacts, skip it.
 - **The human is the final arbiter.** The miner proposes; the human decides what becomes
   calibration.
+
+## Pitfalls
+
+### Discovery API: prefer REST over GraphQL
+
+`gh search prs` uses GitHub's GraphQL API, which can fail with auth/permission errors on
+private repos or repos with restricted API access. The script now uses `gh pr list --search`
+(REST API) instead. If the REST endpoint also fails, fall back to manual discovery: list
+recent merged PRs with `gh pr list --state merged --limit N` and filter by author
+client-side.
+
+### Self-review comments are noise, not signal
+
+Agent-authored PRs (like those from Claude Code / Hermes) often contain lengthy self-review
+comments from the PR author explaining design decisions. These are the agent talking to
+itself — not human corrections worth calibrating on. The script filters out comments from
+the PR author (`login == pr_author`). Without this filter, a 14-day scan on agent-authored
+PRs produces 80%+ self-review noise that buries the real human feedback.
+
+### Verbose comment pattern is self-correcting
+
+When the user tells the agent to simplify verbose comments across multiple agent-authored
+PRs, that IS a pattern worth capturing — but the commenter is the PR author (the agent's
+user telling the agent to fix the code). These are calibration-worthy but require the
+script to detect them as a separate category: user-corrections-on-agent-code, not
+external-human-review. In practice, these corrections eventually feed into vasco-reviewer
+priorities (e.g. #14 Comment discipline) and the miner catches them on future runs.

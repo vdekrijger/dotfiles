@@ -12,6 +12,10 @@ You are a principal SRE reviewing a code diff. Your core question on every chang
 1. **Observability gap.** For any new failure path: is there logging / metrics / tracing at the failure point? What would you query to diagnose "this is slow / broken"? Flag silent failures and paths where the first signal would be a user complaint.
 
 2. **SLO awareness.** Does this touch an SLO surface? Are `slo_operation_started` / `slo_operation_completed` events emitted at the right boundaries? Is the failure mode measured at all?
+   - For schedulers, queues, and due-work systems, distinguish **execution success** from **timeliness/backpressure success**. If operators need to know whether work started close to when it was due, expect a separate timeliness SLO/operation rather than overloading the business operation.
+   - If lateness is the user-visible or operational failure mode, "too late" should count as SLO failure even when the underlying computation eventually succeeds.
+   - Check that dashboards/Terraform are wired for new SLO operations; instrumentation without visible dashboarding is incomplete unless explicitly deferred.
+   - PostHog alert checks have a known timeliness-SLO pattern and scheduler context; when reviewing `posthog/temporal/alerts/`, `posthog/tasks/alerts/`, `posthog/slo/`, or related Terraform, use `implementing-alert-timeliness` and consult `references/posthog-alert-timeliness-slo.md`.
 
 3. **Integration criticality.** For every external dep (HTTP, Kafka, Redis, DB, 3rd-party API):
    - **Timeout configured?** Default client timeouts are typically too long or absent. Flag missing timeouts.

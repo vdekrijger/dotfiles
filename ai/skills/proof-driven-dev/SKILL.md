@@ -126,6 +126,13 @@ Note: In Hermes, Superpowers skills installed from `obra/superpowers` are expose
 Follow the full brainstorming flow — explore context, ask clarifying
 questions one at a time, propose approaches, present design, write spec.
 
+**Inverse pass (mandatory):** After proposing 2-3 approaches but before
+settling on one, ask the inverse of the design question: "What's the
+strongest argument against each approach? What assumptions are we making
+that could be wrong?" This surfaces blind spots before commitment. Do
+this even when the recommendation seems obvious — the cheap approaches
+hide the most expensive surprises.
+
 ## Phase 2: Extract Criteria
 
 **Invoke:** `criteria-extraction` skill
@@ -136,6 +143,20 @@ the testable contract for the rest of the pipeline.
 Review the matrix output. If any requirement seems under-specified in
 edge cases, re-dispatch the test architect with guidance on what to
 probe deeper.
+
+**Challenge-criteria pass (mandatory):** After the criteria matrix is
+produced, run one inverse pass against the spec itself:
+
+> "What assumptions does this spec make that could be wrong? What edge
+> cases are we implicitly ignoring? What would break if the most
+> optimistic assumption turned out false?"
+
+Generate challenge criteria — testable assertions that probe the spec's
+blind spots. These don't become implementation requirements but are
+recorded in the matrix as `CHALLENGE` items. The human reviews them and
+can promote any to real requirements. This catches "the spec says the
+API returns in 200ms but we never asked what happens if it takes 5s"
+before a line of code is written.
 
 ### Proportionality Gate
 
@@ -184,6 +205,19 @@ This produces:
 - Verification report (traceability matrix with pass/fail per requirement)
 - Rerunnable verify script
 - Visual artifacts (screenshots/GIFs)
+
+**Adversarial verification pass (mandatory):** After all tests pass,
+run one adversarial question before declaring victory:
+
+> "If this feature were broken despite all tests passing, where would
+> the bug hide? What test gap would it exploit? What production-only
+> condition would trigger it?"
+
+This surfaces: missing integration tests, race conditions invisible in
+single-threaded tests, timeout/retry interactions, data-dependent edge
+cases, and config/environment assumptions. Record any identified gaps
+as `ADVERSARIAL` items in the verification report. Fix the ones that
+are testable; escalate the ones that need production monitoring.
 
 If the report shows FAIL or UNCOVERED items, fix them before proceeding:
 1. For FAIL: debug the failing test or implementation
@@ -373,6 +407,51 @@ learning loop:
 This phase is what turns human review feedback into a durable
 improvement signal — every correction the human makes once should never
 need to be made again.
+
+## Pro Prompting Techniques
+
+These adversarial/critical-thinking techniques are baked into specific
+pipeline phases but are also useful standalone. Apply them whenever you
+need to stress-test a decision, design, or implementation.
+
+### Techniques in use
+
+| Technique | Phase | What it does |
+|---|---|---|
+| **Inverse questioning** | 1 (Brainstorm) | "What's the strongest argument against this approach?" |
+| **Challenge criteria** | 2 (Criteria) | "What assumptions could be wrong? What edge cases are we ignoring?" |
+| **Adversarial verification** | 5 (Verify) | "If this were broken despite all tests passing, where would the bug hide?" |
+
+### Techniques to apply ad-hoc
+
+These aren't formal pipeline phases but are useful when you hit
+ambiguous decisions or unexpectedly complex problems:
+
+**Pre-mortem** — "Imagine this shipped and customers are filing bugs.
+What's the root cause?" Catches optimistic assumptions before they
+become production incidents.
+
+**Steel-man alternatives** — Before dismissing a rejected approach,
+make the strongest possible case for it. If the case is genuinely weak
+after steel-manning, you can dismiss with confidence. If it surfaces
+something your chosen approach misses, reconsider.
+
+**Constraint relaxation** — "What could we build if we removed
+constraint X?" Useful when a design feels forced. Sometimes the
+constraint is self-imposed or outdated.
+
+**Confidence calibration** — After making a claim ("this will handle 10k
+RPS"), ask: "How confident am I in this? What evidence supports it?
+What would prove me wrong?" Record the confidence level and evidence
+gap in the spec.
+
+**Recursive decomposition** — When a task feels overwhelming or the
+agent struggles to hold context, ask: "What's the smallest independent
+piece of this I can build and verify?" Repeat until atomic.
+
+**Rubber-duck inversion** — Explain why the code works correctly.
+Then explain why it might not. The gap between the two explanations
+is where bugs live.
 
 ## Rules
 

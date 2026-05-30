@@ -25,6 +25,13 @@ suggestions, and a polished HTML report.
 The two are complementary: pattern-eval runs its own analysis, then
 delegates the HTML report to `/insights`.
 
+**Sibling: `pr-feedback-miner`.** This skill analyzes Claude Code
+*sessions* for anti-patterns. `pr-feedback-miner` analyzes GitHub *PR
+comments* for the same goal — surfacing recurring corrections and
+feeding them into reviewer calibration. Run both: pattern-eval for
+how you interact with the agent, pr-feedback-miner for what human
+reviewers keep catching in PRs.
+
 ## Data Locations
 
 Derive the project directory dynamically:

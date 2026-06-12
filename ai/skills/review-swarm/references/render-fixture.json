@@ -1,0 +1,105 @@
+{
+  "title": "Review Swarm: render-fixture — branch feature/login-retry",
+  "repo_slug": "render-fixture",
+  "report_filename": "render-fixture-20260612-1200.html",
+  "storage_key": "review-swarm-render-fixture-20260612-1200",
+  "generated_at": "2026-06-12 12:00 UTC",
+  "meta_rows": [
+    ["Repo", "render-fixture"],
+    ["Branch", "feature/login-retry → main"],
+    ["Mode", "branch-diff"],
+    ["Files", "2 changed"],
+    ["Reviewers", "sre, vasco"],
+    ["Date", "2026-06-12"]
+  ],
+  "summary_bullets": [
+    "Adds retry logic to the login handler with a configurable backoff.",
+    "Retry loop can spin hot when backoff is zero — flagged by both reviewers.",
+    "Config parsing swallows <ValueError> silently."
+  ],
+  "verdict": {
+    "emoji": "⚠",
+    "text": "REQUEST CHANGES",
+    "grade": "C",
+    "grade_class": "c",
+    "rationale": "Two HIGH findings (one convergent) in the retry path; fix the hot loop and the swallowed error before merging."
+  },
+  "simplify": {
+    "status": "edited",
+    "edited_files": ["app/login.py"]
+  },
+  "diff": {
+    "mode": "branch-diff",
+    "base": "main",
+    "repo_root": "/tmp/review-swarm-render-test",
+    "changed_files": ["app/login.py", "app/config.py"]
+  },
+  "reviewers": [
+    {
+      "name": "sre",
+      "risk": "HIGH",
+      "grade": "C",
+      "takeaway": "Retry loop with zero backoff will hammer the auth backend during an outage."
+    },
+    {
+      "name": "vasco",
+      "risk": "MEDIUM",
+      "grade": "B+",
+      "takeaway": "Solid structure; error handling hides config mistakes & uses bare except."
+    }
+  ],
+  "findings": [
+    {
+      "id": 1,
+      "file": "app/login.py",
+      "line": "8",
+      "severity": "high",
+      "adjusted_severity": "high",
+      "introduction": "introduced",
+      "confidence": "observed-in-code",
+      "reviewers": ["sre", "vasco"],
+      "convergent": true,
+      "body": "Retry loop has no lower bound on backoff: if `backoff <= 0` the loop spins hot and DoSes the auth backend during an outage.",
+      "fix": "Clamp backoff to a minimum (e.g. `max(backoff, 0.1)`) and cap total attempts."
+    },
+    {
+      "id": 2,
+      "file": "app/login.py",
+      "line": "12",
+      "severity": "medium",
+      "adjusted_severity": "medium",
+      "introduction": "introduced",
+      "confidence": "observed-in-code",
+      "reviewers": ["vasco"],
+      "convergent": false,
+      "body": "Bare `except Exception` around the auth call hides programming errors as retryable failures.",
+      "fix": "Catch the specific transport error (`AuthTimeout`) and let everything else propagate."
+    },
+    {
+      "id": 3,
+      "file": "app/config.py",
+      "line": "6",
+      "severity": "high",
+      "adjusted_severity": "low",
+      "introduction": "untouched",
+      "confidence": "theoretical-worst-case",
+      "reviewers": ["sre"],
+      "convergent": false,
+      "body": "`int(raw)` on the backoff env var raises ValueError which is swallowed by the caller — misconfiguration silently falls back to defaults.",
+      "fix": "Log a warning with the rejected value before falling back."
+    },
+    {
+      "id": 4,
+      "file": "general",
+      "line": "general",
+      "severity": "medium",
+      "adjusted_severity": "medium",
+      "introduction": "introduced",
+      "confidence": "observed-in-code",
+      "reviewers": ["vasco"],
+      "convergent": false,
+      "body": "No tests cover the new retry behavior — neither the backoff clamp nor the give-up path.",
+      "fix": "Add a unit test that simulates two failures then success, and one that exhausts retries."
+    }
+  ]
+}

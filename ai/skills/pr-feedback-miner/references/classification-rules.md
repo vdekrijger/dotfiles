@@ -1,6 +1,7 @@
 # Feedback Classification Rules
 
-Maps human PR feedback phrasing to vasco-reviewer priorities. Rules are applied
+Maps human PR feedback phrasing to the priorities of the vasco-reviewer custom
+agent (defined at `~/.claude/agents/vasco-reviewer.md`). Rules are applied
 in priority order — the first match wins.
 
 ## Priority 1: Tests — Edge Cases

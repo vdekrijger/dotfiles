@@ -100,7 +100,7 @@ Write a markdown report to `~/.claude/skills/review-swarm/references/miner-repor
 - **Scope**: repo, PRs analyzed (+ since date), comments reviewed, actionable count, applied count, new patterns detected
 - **Pattern Distribution**: table of priority | count | applied
 - **Top Missed Patterns**: ranked list of what humans catch that the swarm missed — counts plus the most common concrete cases
-- **Proposed Calibration Updates**: new entry counts for calibration.md and wins.md, proposed vasco-reviewer SKILL.md changes
+- **Proposed Calibration Updates**: new entry counts for calibration.md and wins.md, proposed changes to the vasco-reviewer custom agent (`~/.claude/agents/vasco-reviewer.md`)
 - **New Pattern Candidates**: per candidate — instance count across PRs, description, proposed priority entry (or, if already present, a note to elevate it due to frequency)
 
 ### Appending to calibration files
@@ -112,13 +112,13 @@ After presenting the report, ask before writing:
   - Append <N> WIN entries to review-swarm/references/wins.md
   - <N> new FP entries for calibration.md
 
-  Proposed vasco-reviewer SKILL.md changes:
+  Proposed vasco-reviewer agent changes (~/.claude/agents/vasco-reviewer.md):
   - <each proposed priority addition>
 
   Apply all? [y/N/select]:
 ```
 
-On confirmation, append to the calibration files and patch vasco-reviewer SKILL.md. The next review-swarm run automatically picks up new entries (Stage 2 reads the last 10 entries per reviewer from both files).
+On confirmation, append to the calibration files and patch the vasco-reviewer custom agent definition (`~/.claude/agents/vasco-reviewer.md`). The next review-swarm run automatically picks up new entries (Stage 2 reads the last 10 entries per reviewer from both files).
 
 ## Flags
 

@@ -25,7 +25,7 @@ Stage 4/5: false-positive + wins capture
 - **No git writes.** NEVER `git add` / `commit` / `push` / `reset` / `checkout`. Read-only git (`status`, `diff`, `log`, `rev-parse`, `remote show`) is fine. Even if the user seems to expect it — they handle git themselves.
 - **Agent independence.** Each reviewer runs as an independent subagent with zero knowledge of siblings. Never mention other reviewers, convergence/synthesis, or any "team"/"swarm" framing in a reviewer prompt. Convergence analysis has value only because the signal is uncontaminated.
 - **Never skip the gate** unless `--no-gate` is explicitly passed.
-- **Never modify `calibration.md` / `wins.md`** outside Stages 4/5. Never regenerate `references/prism.bundle.html` in a run. Never modify a report after it's written.
+- **Never modify `calibration.md` / `wins.md`** outside Stages 4/5 or an explicit `--distill` pass. Never regenerate `references/prism.bundle.html` in a run. Never modify a report after it's written.
 
 ## Stage 0: diff detection
 
@@ -39,6 +39,7 @@ Flags:
 --no-gate                don't prompt for confirmation after simplify
 --base=<ref>             explicit base branch
 --intent=<text-or-path>  original ask for the intent reviewer (inline text, or a path to a spec/plan file)
+--distill                no review; calibration maintenance pass (see Maintenance section)
 --uncommitted            review staged + unstaged working tree
 --staged                 review staged only
 --sha=<base>..<head>     explicit range
@@ -50,7 +51,7 @@ Flags:
 2. Else if working tree or index dirty → uncommitted mode.
 3. Else → print `[review-swarm] No changes to review.` and exit cleanly.
 
-**Pass-cap on the same branch.** If 2+ prior reports exist for this branch+SHA family in `~/Library/Caches/review-swarm/${REPO_SLUG}*.html` (HEAD or ancestor, last hour), warn that pass 3+ has historically high false-positive density (diminishing returns, defense amplification) and prompt `Continue with another full pass anyway? [y/N]`, suggesting `--only vasco`, `--only code-reviewer`, or shipping as-is. Default/N → exit with pointer to the most recent report. Soft cap — `y` proceeds.
+**Pass-cap on the same branch.** If 2+ prior reports exist for this branch+SHA family in `~/Library/Caches/review-swarm/${REPO_SLUG}*.html` (HEAD or ancestor, last hour), warn that pass 3+ has historically high false-positive density (diminishing returns, defense amplification) and ask via the AskUserQuestion tool — options: "Stop — use the prior report" (recommended/first), "Run another full pass", "Single-reviewer follow-up (--only)". Stop → exit with pointer to the most recent report. Soft cap — the user can always opt in. If AskUserQuestion is unavailable, fall back to a text `[y/N]` prompt where N/default = stop.
 
 **Gather diff material** per mode:
 
@@ -62,7 +63,7 @@ Flags:
 
 Store: mode, base ref, changed files, full diff, commit messages, HEAD SHA, repo slug (basename of repo root, non-alphanumerics → `-`).
 
-**Per-file diffs** (drives the report's inline diff renderer): for each changed file capture the same diff command with `-U999999 -- "$f"` into `PER_FILE_DIFFS[$f]`. Empty output → record empty string (renderer shows a placeholder); `Binary files differ` → pass through verbatim. Never abort on this.
+**Per-file diffs** (drives the report's inline diff renderer): computed by `references/render.py` at report time — do NOT capture or read `-U999999` per-file diffs yourself.
 
 **Report path:** `REPORT_PATH="$HOME/Library/Caches/review-swarm/${REPO_SLUG}-$(date -u +%Y%m%d-%H%M%S).html"`
 
@@ -72,33 +73,68 @@ Skip when `--skip simplify`, or `--only` without `simplify`, or the `simplify` s
 
 Invoke the `simplify` skill with the changed file list + diff; it edits files in place. Capture `SIMPLIFY_EDITED_FILES` via `git diff --name-only` afterward.
 
-**Gate** (unless `--no-gate`): list the edited files, prompt `Proceed with review of simplified code? [y/N]`. `y` → Stage 2; anything else → `[review-swarm] Aborted after Stage 1. simplify edits remain in your working tree; revert with 'git checkout -- <files>' if undesired.` and exit.
+**Gate** (unless `--no-gate`): list the edited files, then ask via AskUserQuestion — options: "Proceed with review of simplified code" / "Abort (keep simplify edits in working tree)". Abort → print `[review-swarm] Aborted after Stage 1. simplify edits remain in your working tree; revert with 'git checkout -- <files>' if undesired.` and exit. If AskUserQuestion is unavailable, fall back to a text `[y/N]` prompt where anything but `y` aborts.
 
 If simplify errors, record `SIMPLIFY_STATUS=errored`, proceed to Stage 2 on the unmodified diff.
 
 ## Stage 2: parallel reviewer dispatch
 
-Roster (default = all; `--only` runs just the listed ones, others skipped silently):
+Roster (default = all; `--only` runs just the listed ones, others skipped silently). The four personas are custom agents defined at `~/.claude/agents/<name>.md` — the persona IS the agent's system prompt, with its model and read-only tools pinned in the agent frontmatter (vasco: sonnet; sre/xp/intent: opus — they need top-tier judgment for their calibration gates):
 
-| Name | Invocation | Model | Skip via |
-|------|------------|-------|----------|
-| vasco | general-purpose subagent, reads `~/.claude/skills/vasco-reviewer/SKILL.md` | `sonnet` | `--skip vasco` |
-| sre | general-purpose subagent, reads `~/.claude/skills/sre-reviewer/SKILL.md` | `opus` | `--skip sre` |
-| xp | general-purpose subagent, reads `~/.claude/skills/xp-reviewer/SKILL.md` | `opus` | `--skip xp` |
-| intent | general-purpose subagent, reads `~/.claude/skills/intent-reviewer/SKILL.md`; requires an intent source (below), auto-skipped with a report note when none resolves | `opus` | `--skip intent` |
-| code-reviewer | subagent_type=superpowers:code-reviewer if available, else skip with warning | `sonnet` | `--skip code-reviewer` |
-| qa-team | invoke the `qa-team` skill if installed; else skip silently, mark "not available on this project" | `sonnet` | `--skip qa-team` |
+| Name | Invocation | Skip via |
+|------|------------|----------|
+| vasco | `subagent_type: vasco-reviewer` | `--skip vasco` |
+| sre | `subagent_type: sre-reviewer` | `--skip sre` |
+| xp | `subagent_type: xp-reviewer` | `--skip xp` |
+| intent | `subagent_type: intent-reviewer`; requires an intent source (below), auto-skipped with a report note when none resolves | `--skip intent` |
+| code-reviewer | `subagent_type: superpowers:code-reviewer`, `model: sonnet`; if unavailable, skip with warning | `--skip code-reviewer` |
+| qa-team | general-purpose subagent (`model: sonnet`) that invokes the `qa-team` skill if installed; else skip silently, mark "not available on this project" | `--skip qa-team` |
 
-Model rationale: `sre`/`xp`/`intent` need opus-grade judgment for their calibration gates; `vasco`/`code-reviewer`/`qa-team` are checklist/pattern-driven, sonnet suffices. Pass `model: "<value>"` in each Agent call (only `sonnet`/`opus`/`haiku` valid); if the harness rejects the param, omit it.
+(Valid `model` values where one is passed explicitly: `sonnet`, `opus`, `haiku`, `fable`.)
 
-**Dispatch all non-skipped reviewers in ONE message with multiple Agent tool calls** (true parallelism). Remember agent independence — no sibling/synthesis mentions.
+### Dispatch mechanism
+
+**Preferred: the Workflow tool** (this skill instructing it counts as user opt-in). One `agent()` call per non-skipped reviewer, all in one `parallel()` — findings come back schema-validated, so Stage 3a needs no text parsing and malformed output is retried by the harness. Resume after fixes is free via `resumeFromRunId`.
+
+```js
+export const meta = {
+  name: 'review-swarm-dispatch',
+  description: 'Fan out review-swarm reviewers in parallel',
+  phases: [{ title: 'Review' }],
+}
+const FINDINGS_SCHEMA = {
+  type: 'object', required: ['findings', 'summary'],
+  properties: {
+    findings: { type: 'array', items: { type: 'object',
+      required: ['file', 'line', 'severity', 'introduction', 'confidence', 'body'],
+      properties: {
+        file: { type: 'string' }, line: { type: 'string' },
+        severity: { enum: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'NIT'] },
+        introduction: { enum: ['introduced', 'exposed', 'untouched'] },
+        confidence: { enum: ['observed-in-code', 'theoretical-worst-case', 'speculative'] },
+        body: { type: 'string' }, fix: { type: 'string' },
+      } } },
+    summary: { type: 'string' },
+  },
+}
+const results = await parallel(args.reviewers.map(r => () =>
+  agent(r.prompt, { label: r.name, phase: 'Review', agentType: r.agentType, model: r.model, schema: FINDINGS_SCHEMA })
+    .then(out => ({ name: r.name, out }))
+))
+return results
+```
+
+Pass `args.reviewers` as `[{name, agentType, model?, prompt}]` (omit `model` for the four personas — their agent definitions pin it; omit `agentType` for qa-team). A `null` result = that reviewer errored.
+
+**Fallback** (Workflow tool unavailable): dispatch all non-skipped reviewers in ONE message with multiple Agent tool calls (true parallelism), passing `subagent_type` and `model` per the roster. In this mode reviewers return the `STRUCTURED_FINDINGS:` text block (instruction 5b below).
+
+Either way: agent independence — no sibling/synthesis mentions in any prompt.
 
 ### Prompt template per reviewer
 
-````
-Read ~/.claude/skills/$R-reviewer/SKILL.md and follow it as your persona. (For
-qa-team: follow its multi-agent workflow as documented in its SKILL.md.)
+Shared diff material comes FIRST and persona-specific content (calibration, original-ask) LAST, so parallel dispatches share the longest possible cacheable prompt prefix.
 
+````
 ## Code changes to review
 
 ### Mode
@@ -113,18 +149,11 @@ $COMMIT_LOG
 ### Full diff
 $FULL_DIFF
 
-## Calibration
-$PAST_FALSE_POSITIVES_BLOCK_FOR_THIS_REVIEWER
-
-$PAST_WINS_BLOCK_FOR_THIS_REVIEWER
-
-(If both blocks are empty, omit the entire `## Calibration` section.)
-
 ## Instructions
 
 1. Read the full diff carefully. For each changed file, also read surrounding context (at least 50 lines above and below) using the Read tool before forming findings.
 
-2. Apply your skill's checklist systematically. Two reviewer-discipline rules apply to every finding:
+2. Apply your checklist systematically. (qa-team only: invoke the `qa-team` skill and follow its multi-agent workflow.) Two reviewer-discipline rules apply to every finding:
 
    a. **Compare against master.** Before suggesting a new defense (timeout, retry, throttle, lock, single-flight, structured logging, capture_exception wrap, etc.), grep for the analogous code path in master and verify whether master ships with that defense for similar code. If master ships without it, suggesting it for this PR is scope creep — flag the underlying gap as a separate concern (severity LOW or NIT), not a finding against this PR. Cite the file:line in master you compared against.
 
@@ -140,17 +169,20 @@ $PAST_WINS_BLOCK_FOR_THIS_REVIEWER
    - `theoretical-worst-case` — happens under conditions you can describe concretely.
    - `speculative` — suspected but unverifiable without running code or production data.
 
-5. Return findings in the EXACT structured format specified in your SKILL.md:
+5. $OUTPUT_INSTRUCTION
 
-STRUCTURED_FINDINGS:
-- file: <path> | line: <N or "general"> | severity: <CRITICAL|HIGH|MEDIUM|LOW|NIT> | introduction: <introduced|exposed|untouched> | confidence: <observed-in-code|theoretical-worst-case|speculative> | reviewer: $R | body: <text>
-- ...
+## Calibration
+$PAST_FALSE_POSITIVES_BLOCK_FOR_THIS_REVIEWER
 
-OVERALL_SUMMARY:
-<one paragraph>
+$PAST_WINS_BLOCK_FOR_THIS_REVIEWER
 
-If no findings, emit `STRUCTURED_FINDINGS:` `(none)` plus the summary.
+(If both blocks are empty, omit the entire `## Calibration` section.)
 ````
+
+`$OUTPUT_INSTRUCTION` depends on dispatch mode:
+
+- **Workflow dispatch:** `Return your findings via the structured output schema. An empty findings array with a summary is valid output.`
+- **Fallback dispatch:** `Return findings in this EXACT format:` followed by the `STRUCTURED_FINDINGS:` block (`- file: <path> | line: <N or "general"> | severity: <CRITICAL|HIGH|MEDIUM|LOW|NIT> | introduction: <…> | confidence: <…> | reviewer: $R | body: <text>`) and `OVERALL_SUMMARY:` paragraph; `(none)` + summary when no findings.
 
 ### Calibration blocks
 
@@ -187,9 +219,9 @@ A reviewer that errors → mark `$R: errored — <short error>` in the report, c
 
 ## Stage 3: synthesize + write report
 
-### 3a. Parse findings
+### 3a. Collect findings
 
-Parse each reviewer's `STRUCTURED_FINDINGS:` block (`file`, `line`, `severity`, `introduction`, `confidence`, `reviewer`, `body`). Missing `introduction`/`confidence` → default `exposed` / `theoretical-worst-case` (median values; prevents grade inflation from missing tags).
+Workflow dispatch returns schema-validated `{findings, summary}` objects — tag each finding with its reviewer name and use directly. Fallback dispatch: parse each reviewer's `STRUCTURED_FINDINGS:` text block (`file`, `line`, `severity`, `introduction`, `confidence`, `reviewer`, `body`); missing `introduction`/`confidence` → default `exposed` / `theoretical-worst-case` (median values; prevents grade inflation from missing tags).
 
 Assign stable IDs 1..N in report-layout order: cross-cutting findings first (severity desc, then reviewer alpha), then file-scoped findings grouped by file (files ordered by max severity, tie-break count desc then path; within a file, severity desc, tie-break line asc, no-line last). ID #1 = most urgent.
 
@@ -228,7 +260,7 @@ Per-reviewer grade from that reviewer's own findings (not convergence-adjusted):
 
 ### 3e. Write report
 
-Read `~/.claude/skills/review-swarm/references/rendering.md` and follow it: render `references/report-template.html` with the documented placeholder substitutions and write to `$REPORT_PATH`.
+Read `~/.claude/skills/review-swarm/references/rendering.md` and follow it: write a `run.json` describing the run, then invoke `references/render.py` to render `$REPORT_PATH` mechanically. Never read `report-template.html`, `prism.bundle.html`, or per-file diffs into context.
 
 ### 3f. Hand back
 
@@ -240,7 +272,7 @@ open <$REPORT_PATH>
 
 ## Stage 4: false-positive capture · Stage 5: wins capture
 
-Two sequential optional prompts after the open command — empty input is the no-op default for both:
+Two sequential optional prompts after the open command — empty input is the no-op default for both. These stay free-text (not AskUserQuestion) because the answer is an arbitrary set of finding IDs:
 
 ```
 [review-swarm] Any false positives? Enter IDs (e.g. 2,5) or press Enter to skip:
@@ -258,6 +290,17 @@ For each provided ID: look up the finding; optionally prompt for a reason/note; 
 ```
 
 (Trailing blank line for separation.) Then confirm: `[review-swarm] Captured <M> <false positives|wins> to <path>` + `These will be surfaced to the relevant personas on next run.` Unknown IDs → warn and skip that ID. These stages are the ONLY writers of the two files.
+
+## Maintenance: `--distill`
+
+`/review-swarm --distill` runs INSTEAD of a review pass (no diff, no reviewers). Purpose: stop `calibration.md`/`wins.md` from growing unboundedly while their lessons get baked into the personas.
+
+1. Read both files; count entries per reviewer.
+2. For each reviewer with >15 calibration entries: identify recurring/generalizable patterns (entries often contain an explicit "Generalizable rule:" sentence) and draft a promotion — a checklist or calibration-gate edit to that persona's agent definition at `~/.claude/agents/<name>-reviewer.md`.
+3. Present all proposed agent-definition edits plus the list of entries to prune (only entries whose lesson is now encoded in the persona). The user approves or rejects per proposal — never apply unapproved edits.
+4. On approval: edit the agent definition, remove the distilled entries from the calibration/wins file, and summarize what moved where.
+
+This is the only sanctioned path that modifies the calibration files outside Stages 4/5.
 
 ## Graceful degradation
 

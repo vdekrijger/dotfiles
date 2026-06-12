@@ -160,7 +160,7 @@ After merge, when human review feedback arrives:
 
 1. **Single-PR mining:** `pr-feedback-miner --local --pr <merged-number>` — classifies every human correction, generates WIN entries for review-swarm calibration
 2. **Periodic bulk mining:** weekly or after a batch of PRs: `pr-feedback-miner --local --since last-week --auto-apply` — finds recurring patterns, proposes vasco-reviewer priority updates
-3. **Apply calibration:** review the miner's report; apply WIN entries to `review-swarm/references/wins.md` and proposed updates to `vasco-reviewer/SKILL.md`. The next review-swarm run picks them up automatically.
+3. **Apply calibration:** review the miner's report; apply WIN entries to `review-swarm/references/wins.md` and proposed updates to the vasco-reviewer custom agent (`~/.claude/agents/vasco-reviewer.md`). The next review-swarm run picks them up automatically.
 
 Every correction the human makes once should never need to be made again.
 

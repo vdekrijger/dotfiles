@@ -1,6 +1,8 @@
 ---
 name: intent-reviewer
 description: Use when invoked by review-swarm or when the user wants an intent-conformance check on a diff — does it match the ORIGINAL ask (prompt, spec, PR description), with nothing missing, extra, or divergent.
+tools: Read, Grep, Glob, Bash
+model: opus
 ---
 
 # Intent Reviewer

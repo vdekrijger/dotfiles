@@ -85,3 +85,18 @@ PR #55986 (vdekrijger, "chore(subscriptions): swap patched() to deprecate_patch(
   Location: posthog/temporal/tests/test_subscriptions_workflows.py general
   Marked FP. Reason: Same as xp/code-reviewer/vasco — one-off enforcement on a single dataclass creates false confidence. The "future-risk if someone adds a large field" framing is the exact false-confidence trap: if it's a real risk, the guard belongs everywhere; if it's not enough of a risk to apply uniformly, the one-off doesn't move the needle.
 
+## 2026-06-10 — posthog-pr62642 — posthog-pr62642-20260610-123915.html
+PR #62642 (vdekrijger, "feat(subscriptions): add report preview for AI prompt subscriptions"). One convergent HIGH marked FP after orchestrator verification; logged once per contributing lane.
+
+- Finding #1 (qa-team/security, HIGH): `delivery.content_snapshot.get("ai_report")` raises AttributeError when content_snapshot is None ("the DB field is nullable").
+  Location: ee/api/subscription.py:1129
+  Marked FP. Reason: Premise factually wrong — `content_snapshot = models.JSONField(default=dict)` (products/exports/backend/models/subscription.py:441), NOT nullable, and no write path stores None; an adjacent comment in the same diff even states "content_snapshot is a non-null object". Generalizable rule: before raising any "JSONField may be None" finding, verify the actual field definition (null=True vs default=dict) — convergence across lanes does not substitute for reading the model.
+
+- Finding #1 (qa-team/reliability, HIGH): Same content_snapshot-None claim, independently raised.
+  Location: ee/api/subscription.py:1129
+  Marked FP. Reason: Same as qa-team/security — field is JSONField(default=dict), not nullable; verify field definitions before None-dereference findings.
+
+- Finding #1 (qa-team/data-integrity, HIGH): Same content_snapshot-None claim, independently raised.
+  Location: ee/api/subscription.py:1129
+  Marked FP. Reason: Same as qa-team/security — field is JSONField(default=dict), not nullable; verify field definitions before None-dereference findings.
+

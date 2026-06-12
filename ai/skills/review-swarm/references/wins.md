@@ -69,3 +69,28 @@ Mined 9 merged PRs for human review feedback. Filtered out self-reviews and bot 
   Location: PR #59624
   Marked WIN. Note: vasco-reviewer priority #4 (scope discipline) covers this — accidental regenerated files in a PR. Keep raising it.
 
+## 2026-06-09 — posthog-pr61414 — posthog-pr61414-20260609-144500.html
+PR #61414 (fix(max): keep open dashboard in Max/PostHog AI context when an insight fails). The convergent symmetry-gap catch drove a real fix the author shipped.
+
+- Finding #1 (sre + qa-team/reliability, MEDIUM): format_schema symmetry gap — the PR hardened `execute_and_format` so one failing insight no longer drops the whole dashboard, but left the sibling `format_schema` path (called by the read_data + upsert_dashboard tools) on the old behavior where a single failing insight aborts the entire dashboard schema. The PR's own test `test_format_schema_handles_exceptions` codified the inconsistency.
+  Location: ee/hogai/context/dashboard/context.py:120 (format_schema)
+  Marked WIN. Note: User acted on it — fixed in PR #61414 by converging both paths onto a shared `_resolve_insight_results` helper and making format_schema resilient (parallel gather + degrade/capture/re-raise-cancel). Generalizable pattern to keep raising: when a PR adds resilience/error-handling to one method, check sibling methods with the same iteration shape for the same failure class — and treat a test in the same PR that asserts the OLD (now-inconsistent) behavior as a strong signal of an unintended asymmetry, not as settled intent.
+
+## 2026-06-10 — posthog-pr62643 — posthog-pr62643-20260610-123916.html
+PR #62643 (vdekrijger, "feat(subscriptions): validate AI prompts at save time"). Two verified operational MEDIUMs drove the only sub-A grade in a 4-PR swarm; both fixed by the author in a follow-up commit the same day.
+
+- Finding #1 (sre, MEDIUM): validate_prompt_plannable didn't pass max_retries, so MaxChatOpenAI inherited max_retries=3 — the "15s timeout" was per-attempt, worst case ~60s holding a sync DRF worker.
+  Location: products/exports/backend/temporal/subscriptions/ai_subscription/spec_generator.py:323
+  Marked WIN. Note: Fixed with max_retries=0 plumbed through generate_query_plan. Pattern to keep raising: any stated "timeout" on an LLM/HTTP client call must be checked against the client's retry default — a per-attempt timeout times retries is the real bound.
+
+- Finding #2 (sre + qa-team/reliability, MEDIUM, convergent): the 15s timeout only bounded the LLM call; build_context_blob ran a BLOCKING_ON_MISS ClickHouse taxonomy query plus Postgres reads before it, unbounded — cold-cache first-save teams hit exactly this path.
+  Location: spec_generator.py:332
+  Marked WIN. Note: Fixed with a 25s overall deadline (bounded thread pool) covering context build + LLM. Pattern: when a request-path budget is claimed, trace EVERYTHING that runs before/around the bounded call, especially cache-miss-blocking query runners.
+
+## 2026-06-10 — posthog-pr62646 — posthog-pr62646-20260610-123916.html
+PR #62646 (vdekrijger, "feat(subscriptions): show AI reports in delivery history").
+
+- Finding #1 (qa-team/performance, MEDIUM): the deliveries MCP tools excluded content_snapshot/recipient_results/error but not the newly added ai_report serializer field — unbounded report markdown would flow into 50-row MCP list responses.
+  Location: products/subscriptions/mcp/tools.yaml:91
+  Marked WIN. Note: Fixed by excluding ai_report from the list tool (kept on retrieve). Pattern to keep raising: when a serializer gains a field, audit every downstream consumer with an exclude/allow list (MCP tools.yaml especially) — exclusion lists are deny-lists and silently leak new fields.
+

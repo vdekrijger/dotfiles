@@ -2,6 +2,7 @@
 name: pattern-eval
 description: Use when analyzing recent Claude Code sessions for anti-patterns in prompt quality or validation overhead, when reviewing one-shot-rate or correction trends, or when invoked manually or by the weekly cron.
 user_invocable: true
+disable-model-invocation: true
 ---
 
 # Pattern Evaluation

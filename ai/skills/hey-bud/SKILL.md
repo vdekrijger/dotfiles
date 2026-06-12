@@ -1,5 +1,6 @@
 ---
 name: hey-bud
+disable-model-invocation: true
 description: Use when the user invokes /hey-bud to build a feature end-to-end — from brainstorming through implementation, code review, cleanup, and Graphite branch stacking.
 ---
 

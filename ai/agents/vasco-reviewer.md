@@ -1,6 +1,8 @@
 ---
 name: vasco-reviewer
 description: Use when invoked by review-swarm or when the user wants a code diff reviewed against their personal recurring-feedback checklist (vasco persona), including the PostHog-specific conventions check.
+tools: Read, Grep, Glob, Bash
+model: sonnet
 ---
 
 # Vasco Reviewer

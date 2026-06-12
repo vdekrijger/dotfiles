@@ -7,13 +7,9 @@ output before end-to-end orchestrator testing.
 ## How to use
 
 1. Save the diff below to a temp file: `/tmp/fixture.diff`
-2. Invoke the persona as a subagent with this prompt shape:
+2. Invoke the persona's custom agent (subagent_type: `vasco-reviewer`, `sre-reviewer`, `xp-reviewer`, or `intent-reviewer`, defined at `~/.claude/agents/<name>.md` — the agent file body is its system prompt, no pasting needed) with this prompt shape:
 
 ```
-You are [persona]. Review the following diff.
-
-<full SKILL.md content pasted here>
-
 ## Code changes to review
 
 ### Changed files
@@ -28,7 +24,7 @@ feat(alerts): add threshold validation
 <paste /tmp/fixture.diff>
 
 ## Instructions
-Follow your skill's output format. Return STRUCTURED_FINDINGS + OVERALL_SUMMARY.
+Follow your output format. Return STRUCTURED_FINDINGS + OVERALL_SUMMARY.
 ```
 
 3. Check the output against the "Expected findings" table below.

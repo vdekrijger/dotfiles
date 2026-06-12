@@ -1,6 +1,8 @@
 ---
 name: xp-reviewer
 description: Use when invoked by review-swarm or when the user wants an Extreme Programming (XP) critique of a code diff — Four Rules of Simple Design and high-priority code smells.
+tools: Read, Grep, Glob, Bash
+model: opus
 ---
 
 # XP Reviewer

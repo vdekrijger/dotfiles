@@ -29,3 +29,25 @@ for src in "$SKILLS_SRC"/*/; do
     echo "+ $name (linked)"
   fi
 done
+
+# Symlink the global CLAUDE.md — dotfiles is the source of truth.
+# An existing real file is backed up once, then replaced with the symlink.
+CLAUDE_SRC="$SCRIPT_DIR/CLAUDE.md"
+CLAUDE_DST="${CLAUDE_HOME:-$HOME/.claude}/CLAUDE.md"
+
+if [[ -L "$CLAUDE_DST" ]]; then
+  if [[ "$(readlink "$CLAUDE_DST")" == "$CLAUDE_SRC" ]]; then
+    echo "= CLAUDE.md (already linked)"
+  else
+    ln -sfn "$CLAUDE_SRC" "$CLAUDE_DST"
+    echo "~ CLAUDE.md (relinked)"
+  fi
+elif [[ -e "$CLAUDE_DST" ]]; then
+  backup="$CLAUDE_DST.pre-dotfiles.bak"
+  [[ -e "$backup" ]] || cp "$CLAUDE_DST" "$backup"
+  ln -sfn "$CLAUDE_SRC" "$CLAUDE_DST"
+  echo "~ CLAUDE.md (migrated real file → symlink; backup at $backup)"
+else
+  ln -s "$CLAUDE_SRC" "$CLAUDE_DST"
+  echo "+ CLAUDE.md (linked)"
+fi

@@ -75,6 +75,11 @@ Before pushing ANY change, `grep -rn` the whole repo — app code AND tests — 
 - The grep-before-push rule, the gates, and the commit/PR rules.
 - **Report back:** structured data (PR #, what changed, gate results, anything deferred) — its final message is data for the controller, not prose for me.
 
+## Handback format
+
+- End every code handback with an asked / built / deviated delta: what was asked, what was built, and where the result deviates from the ask and why (scope added or dropped, approach changes, files touched beyond the obvious set). "No deviations" is a valid and valuable delta
+- Run `/simplify` + `/review-swarm` as the default exit gate after PR/feature work — don't wait to be asked. State which gates ran and the resulting grade; if a gate was skipped (e.g. trivial one-liner), say so explicitly rather than silently omitting
+
 ## Refactoring rules
 
 - Always do the COMPLETE migration in one pass
@@ -98,11 +103,23 @@ Before pushing ANY change, `grep -rn` the whole repo — app code AND tests — 
 ## Git
 
 - Never add `Co-Authored-By` lines to commit messages
+- Always open PRs as drafts (`--draft`), never ready-for-review
+- After initial PR creation, never rewrite a PR body wholesale — I edit bodies after creation (screenshots, proof-of-work notes). Fetch the current body (`gh pr view --json body`), anchor-splice the change in, and write that back. If an overwrite already clobbered my edits, recover via GraphQL `userContentEdits` (edit history keeps prior bodies with image URLs intact)
 - Never leave code review comments on PRs when running the code-review skill (when Claude is the reviewer, findings go to me, not onto the PR)
 - When addressing bot review comments (Greptile etc.) on a PR, reply to each comment with the decision — "Addressed in <commit>" or a decline with rationale — so the PR carries the paper trail. Outside-diff findings in collapsed blocks get a regular PR comment
 - Committing and pushing in service of the current task is fine without an explicit ask (finishing a PR flow, addressing review comments, shipping an agreed fix). Still stop and ask before anything destructive or hard to undo: force-pushes, history rewrites of pushed branches, branch deletion, or pushing to shared/protected branches. Batch pushes (CI credits) and report what was pushed
 - **Default to Graphite (`gt`) for any branching, stacking, syncing, or PR-submit work — across all repos and terminals.** Use `gt create` over `git checkout -b`, `gt submit` over `git push`, `gt sync` over `git pull` on trunk, `gt restack` over `git rebase`, `gt log` to inspect the stack. Plain `git` is fine for read-only inspection (`status`, `diff`, `log` on a single branch) and for `git commit` itself
 - If `gt submit` fails because of stack conflicts or restack issues, **stop and ask** — don't resolve restack conflicts unilaterally, and don't fall back to `git push` without explicit approval
+
+## Session hygiene
+
+- Scratch artifacts created mid-session (seed scripts, lockfiles, fixtures, one-off repro files) go in a gitignored scratch dir or /tmp — never the repo root
+- At handback, `git status` should show only files that belong to the change; clean up or relocate everything else
+
+## Memory hygiene
+
+- When all of a project's PRs merge or close, delete its project memory file and its MEMORY.md index line in the same session; promote any surviving lesson to a feedback/reference memory or CLAUDE.md
+- When a feedback memory has proven stable (unchanged for weeks, universally applicable), promote it into CLAUDE.md and delete the memory file — CLAUDE.md loads deterministically every session (including for subagents), memory recall does not
 
 ## Preferences
 

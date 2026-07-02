@@ -30,6 +30,51 @@ for src in "$SKILLS_SRC"/*/; do
   fi
 done
 
+# Symlink hook scripts under ai/hooks/ into ~/.claude/hooks/.
+# Same link semantics as skills; an existing real file is backed up once.
+HOOKS_SRC="$SCRIPT_DIR/hooks"
+HOOKS_DST="${CLAUDE_HOME:-$HOME/.claude}/hooks"
+
+mkdir -p "$HOOKS_DST"
+
+for src in "$HOOKS_SRC"/*; do
+  [[ -e "$src" ]] || continue
+  name=$(basename "$src")
+  dst="$HOOKS_DST/$name"
+
+  if [[ -L "$dst" ]]; then
+    if [[ "$(readlink "$dst")" == "$src" ]]; then
+      echo "= hooks/$name (already linked)"
+      continue
+    fi
+    ln -sfn "$src" "$dst"
+    echo "~ hooks/$name (relinked)"
+  elif [[ -e "$dst" ]]; then
+    backup="$dst.pre-dotfiles.bak"
+    [[ -e "$backup" ]] || cp "$dst" "$backup"
+    ln -sfn "$src" "$dst"
+    echo "~ hooks/$name (migrated real file → symlink; backup at $backup)"
+  else
+    ln -s "$src" "$dst"
+    echo "+ hooks/$name (linked)"
+  fi
+done
+
+# Seed ~/.claude/settings.json on a fresh machine. Copy, NOT symlink — the
+# harness rewrites this file atomically (write temp + rename), which would
+# sever a symlink on the first settings change. Local file wins after seeding.
+SETTINGS_SRC="$SCRIPT_DIR/claude-settings.json"
+SETTINGS_DST="${CLAUDE_HOME:-$HOME/.claude}/settings.json"
+
+if [[ ! -e "$SETTINGS_DST" ]]; then
+  cp "$SETTINGS_SRC" "$SETTINGS_DST"
+  echo "+ settings.json (seeded — its hooks reference catnip and peon-ping; install those separately)"
+elif ! diff -q "$SETTINGS_SRC" "$SETTINGS_DST" >/dev/null 2>&1; then
+  echo "≠ settings.json drifted from ai/claude-settings.json (local wins; diff them to reconcile)"
+else
+  echo "= settings.json (matches template)"
+fi
+
 # Symlink the global CLAUDE.md — dotfiles is the source of truth.
 # An existing real file is backed up once, then replaced with the symlink.
 CLAUDE_SRC="$SCRIPT_DIR/CLAUDE.md"

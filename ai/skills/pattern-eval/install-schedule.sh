@@ -104,9 +104,9 @@ cat > "$PLIST" << EOF
     <integer>${MINUTE}</integer>
   </dict>
   <key>StandardOutPath</key>
-  <string>/tmp/claude-pattern-eval.log</string>
+  <string>${HOME}/Library/Logs/claude-pattern-eval.log</string>
   <key>StandardErrorPath</key>
-  <string>/tmp/claude-pattern-eval.err</string>
+  <string>${HOME}/Library/Logs/claude-pattern-eval.err</string>
 </dict>
 </plist>
 EOF
@@ -122,6 +122,6 @@ echo "If your laptop is asleep at the scheduled time, the job is skipped."
 echo ""
 echo "Useful commands:"
 echo "  Check status:  launchctl list $LABEL"
-echo "  View output:   cat /tmp/claude-pattern-eval.log"
-echo "  View errors:   cat /tmp/claude-pattern-eval.err"
+echo "  View output:   cat ~/Library/Logs/claude-pattern-eval.log"
+echo "  View errors:   cat ~/Library/Logs/claude-pattern-eval.err"
 echo "  Uninstall:     bash $0 --uninstall"

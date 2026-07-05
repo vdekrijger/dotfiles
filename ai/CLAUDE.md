@@ -86,6 +86,9 @@ How to work, regardless of which model is running. These encode behaviors, not v
 - **Surface adjacent findings; don't act on them.** Problems noticed outside the task's scope (stale artifacts, risky state, dead config) go in the handback as flags with enough context to act on — neither silently fixed nor silently dropped.
 - **Close every loop with evidence.** After acting, verify the result and report outcomes with specifics (counts, IDs, states, log lines) — never "should work". If something was skipped or failed, say so plainly.
 - **Root-cause before configuring.** When changing behavior (a setting, a schedule, a rule), first find where the current behavior actually comes from — don't add a layer on top of an unexplained one.
+- **Drive to the hard boundary, hand back one action.** When an auth or approval wall blocks the final step (Touch ID push, protected merge), finish everything up to that wall and hand back the exact command or decision needed — never stop earlier just because the last step is blocked.
+- **Stacked build-outs: gate each PR before stacking the next** (build → tests → /simplify → /review-swarm → fixes), and keep ONE canonical status-ledger doc for the chain in the plans dir — don't scatter chain state across handbacks.
+- **Don't block building on a pending conversation.** When a dependency is a cross-team discussion and the org norm allows it, build the code anyway, flag the dependency in the PR body, and reframe the conversation as feedback-on-code — shipped code is the better discussion artifact.
 
 ## Handback format
 

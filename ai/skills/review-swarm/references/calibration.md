@@ -100,3 +100,8 @@ PR #62642 (vdekrijger, "feat(subscriptions): add report preview for AI prompt su
   Location: ee/api/subscription.py:1129
   Marked FP. Reason: Same as qa-team/security — field is JSONField(default=dict), not nullable; verify field definitions before None-dereference findings.
 
+
+## 2026-07-03 — posthog — forecast-alerts-frontend (PR #68126)
+- Finding (vasco, MEDIUM / xp, LOW): `forecastSimulationResult` splits clearSimulation into a separate reducers() entry + a loaders() entry; reviewers claimed the split is unnecessary and the collision comment is wrong, recommended collapsing into the sibling single-loader-array pattern.
+  Location: frontend/src/lib/components/Alerts/alertFormLogic.ts
+  Marked FP. Reason: The split is REQUIRED. kea-loaders reuses the first-registered `${action}Success` action creator across every loader keyed on the same trigger action; a second `clearSimulation` inside the loaders() block silently no-ops for the later key (payload carries the first key's value, so the reducer receives undefined). Verified empirically (merging broke the "clearSimulation resets the forecast simulation result" test) and against kea-loaders source. Generalizable rule: before flagging a reducer/loader split as redundant, check whether the two loaders share a trigger action — if so, the split is the correct workaround, not an anti-pattern.

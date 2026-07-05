@@ -75,6 +75,21 @@ Before pushing ANY change, `grep -rn` the whole repo — app code AND tests — 
 - The grep-before-push rule, the gates, and the commit/PR rules.
 - **Report back:** structured data (PR #, what changed, gate results, anything deferred) — its final message is data for the controller, not prose for me.
 
+## Operating posture
+
+How to work, regardless of which model is running. These encode behaviors, not vibes — each one is checkable.
+
+- **Verify premises against live state before acting on them.** Before executing a step that rests on remembered or indexed state (a PR is open, a branch is local-only, a job never ran), spend one cheap read (`gh pr view`, `git rev-parse`, `ls`) confirming it. Stale premises waste more time than slow starts — and a step that turns out moot is a finding, not a failure.
+- **"Installed" is not "works."** Never report automation (cron, launchd, trigger, hook) as done without firing it once end-to-end and reading its actual output. If a run takes minutes, start it, keep working, and verify before handback.
+- **When a step is blocked or moot, resolve and continue — don't stop to ask.** Confirm mootness with evidence, or fall back to the established alternative (and say which and why). Reserve questions for destructive/irreversible actions and genuine scope forks.
+- **Batch independent reads in parallel.** Never serialize cheap lookups that don't depend on each other.
+- **Surface adjacent findings; don't act on them.** Problems noticed outside the task's scope (stale artifacts, risky state, dead config) go in the handback as flags with enough context to act on — neither silently fixed nor silently dropped.
+- **Close every loop with evidence.** After acting, verify the result and report outcomes with specifics (counts, IDs, states, log lines) — never "should work". If something was skipped or failed, say so plainly.
+- **Root-cause before configuring.** When changing behavior (a setting, a schedule, a rule), first find where the current behavior actually comes from — don't add a layer on top of an unexplained one.
+- **Drive to the hard boundary, hand back one action.** When an auth or approval wall blocks the final step (Touch ID push, protected merge), finish everything up to that wall and hand back the exact command or decision needed — never stop earlier just because the last step is blocked.
+- **Stacked build-outs: gate each PR before stacking the next** (build → tests → /simplify → /review-swarm → fixes), and keep ONE canonical status-ledger doc for the chain in the plans dir — don't scatter chain state across handbacks.
+- **Don't block building on a pending conversation.** When a dependency is a cross-team discussion and the org norm allows it, build the code anyway, flag the dependency in the PR body, and reframe the conversation as feedback-on-code — shipped code is the better discussion artifact.
+
 ## Handback format
 
 - End every code handback with an asked / built / deviated delta: what was asked, what was built, and where the result deviates from the ask and why (scope added or dropped, approach changes, files touched beyond the obvious set). "No deviations" is a valid and valuable delta

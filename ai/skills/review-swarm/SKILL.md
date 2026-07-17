@@ -94,7 +94,13 @@ Roster (default = all; `--only` runs just the listed ones, others skipped silent
 
 ### Dispatch mechanism
 
-**Preferred: the Workflow tool** (this skill instructing it counts as user opt-in). One `agent()` call per non-skipped reviewer, all in one `parallel()` — findings come back schema-validated, so Stage 3a needs no text parsing and malformed output is retried by the harness. Resume after fixes is free via `resumeFromRunId`.
+**Preferred: the Workflow tool** (this skill instructing it counts as user opt-in — the user does not need to say "workflow"). The workflow owns ONLY the mechanical fan-out. Before launching, write the shared diff packet (Mode, Changed files, Commit messages, HEAD SHA, Full diff — the `## Code changes to review` block below) ONCE to a temp file:
+
+```
+PACKET_PATH="${TMPDIR:-/tmp}/review-swarm-${REPO_SLUG}-${HEAD_SHA}.md"
+```
+
+Each reviewer unit's prompt is then the persona briefing plus that packet path — the diff is never inlined into `args`, so the script and `args` stay small regardless of diff size. One `agent()` call per non-skipped reviewer, all in one `parallel()` (a single barrier is correct because Stage 3 synthesis needs every reviewer's findings together; the runtime caps concurrency itself). Findings come back schema-validated, so Stage 3a needs no text parsing and malformed output is retried by the harness. Resume after fixes is free via `resumeFromRunId`.
 
 ```js
 export const meta = {
@@ -124,18 +130,27 @@ const results = await parallel(args.reviewers.map(r => () =>
 return results
 ```
 
-Pass `args.reviewers` as `[{name, agentType, model?, prompt}]` (omit `model` for the four personas — their agent definitions pin it; omit `agentType` for qa-team). A `null` result = that reviewer errored.
+Pass `args.reviewers` as `[{name, agentType, model?, prompt}]`, where each `prompt` is the briefing + packet path (small — no inlined diff) (omit `model` for the four personas — their agent definitions pin it; omit `agentType` for qa-team). With the `schema` option, findings return as validated JSON — the textual `STRUCTURED_FINDINGS:` block (instruction 5b below) is only the fallback-dispatch format. A `null` slot in the results = that reviewer was skipped mid-run or errored; report it as a missing reviewer in the completion manifest (Stage 3a) — never fold it in as a completed/clean review.
 
-**Fallback** (Workflow tool unavailable): dispatch all non-skipped reviewers in ONE message with multiple Agent tool calls (true parallelism), passing `subagent_type` and `model` per the roster. In this mode reviewers return the `STRUCTURED_FINDINGS:` text block (instruction 5b below).
+**Degradation chain:**
+
+1. **Workflow tool unavailable** → dispatch all non-skipped reviewers in ONE message with multiple Agent (plain subagent) tool calls (true parallelism), passing `subagent_type` and `model` per the roster. Reviewers return the `STRUCTURED_FINDINGS:` text block.
+2. **No subagent tool at all** → run the reviewers as sequential independent passes (one after another), each with the same isolated packet-based prompt. Slower, but preserves agent independence.
 
 Either way: agent independence — no sibling/synthesis mentions in any prompt.
 
 ### Prompt template per reviewer
 
-Shared diff material comes FIRST and persona-specific content (calibration, original-ask) LAST, so parallel dispatches share the longest possible cacheable prompt prefix.
+The diff material lives in the packet file, so the packet-pointer + instructions are byte-identical across reviewers; persona-specific content (calibration, original-ask) comes LAST, giving parallel dispatches the longest possible cacheable prompt prefix.
+
+The `## Code changes to review` block below is the **packet file content** — written once to `$PACKET_PATH` (see dispatch), not inlined per reviewer. Each reviewer prompt is the packet-pointer + everything from `## Instructions` onward.
 
 ````
 ## Code changes to review
+
+Read the review packet at `$PACKET_PATH` in full before forming findings — it contains the mode, changed-file list, commit messages, HEAD SHA, and full diff for this review.
+
+--- packet file ($PACKET_PATH) contents ---
 
 ### Mode
 $MODE (branch-diff / uncommitted / staged / sha-range)
@@ -146,12 +161,17 @@ $FILE_LIST
 ### Commit messages
 $COMMIT_LOG
 
+### HEAD SHA
+$HEAD_SHA
+
 ### Full diff
 $FULL_DIFF
 
+--- end packet file ---
+
 ## Instructions
 
-1. Read the full diff carefully. For each changed file, also read surrounding context (at least 50 lines above and below) using the Read tool before forming findings.
+1. Read the packet's full diff carefully. For each changed file, also read surrounding context (at least 50 lines above and below) using the Read tool before forming findings.
 
 2. Apply your checklist systematically. (qa-team only: invoke the `qa-team` skill and follow its multi-agent workflow.) Two reviewer-discipline rules apply to every finding:
 
@@ -221,7 +241,7 @@ A reviewer that errors → mark `$R: errored — <short error>` in the report, c
 
 ### 3a. Collect findings
 
-Workflow dispatch returns schema-validated `{findings, summary}` objects — tag each finding with its reviewer name and use directly. Fallback dispatch: parse each reviewer's `STRUCTURED_FINDINGS:` text block (`file`, `line`, `severity`, `introduction`, `confidence`, `reviewer`, `body`); missing `introduction`/`confidence` → default `exposed` / `theoretical-worst-case` (median values; prevents grade inflation from missing tags).
+Workflow dispatch returns schema-validated `{findings, summary}` objects — tag each finding with its reviewer name and use directly. A `null` slot (reviewer skipped or errored) is recorded as a missing reviewer in the completion manifest (`$R: errored — no result`) and gets grade `—`, never counted as a completed or clean review. Fallback dispatch: parse each reviewer's `STRUCTURED_FINDINGS:` text block (`file`, `line`, `severity`, `introduction`, `confidence`, `reviewer`, `body`); missing `introduction`/`confidence` → default `exposed` / `theoretical-worst-case` (median values; prevents grade inflation from missing tags).
 
 Assign stable IDs 1..N in report-layout order: cross-cutting findings first (severity desc, then reviewer alpha), then file-scoped findings grouped by file (files ordered by max severity, tie-break count desc then path; within a file, severity desc, tie-break line asc, no-line last). ID #1 = most urgent.
 
@@ -305,7 +325,8 @@ This is the only sanctioned path that modifies the calibration files outside Sta
 ## Graceful degradation
 
 - Missing sibling skill (`simplify`, `qa-team`, `superpowers:code-reviewer`): warn once in the report, skip, continue (`qa-team` is PostHog-specific — skip silently elsewhere).
+- Dispatch engine: Workflow tool unavailable → plain subagent (Agent) tool in parallel; no subagent tool at all → sequential independent passes. Same packet-based prompt at every rung.
 - No diff → `[review-swarm] No changes to review.`, no report.
-- Reviewer agent errors → `[agent errored]` in report, synthesis continues.
+- Reviewer agent errors or returns a `null` workflow slot → marked missing in the completion manifest (grade `—`), synthesis continues; never claimed as completed.
 - simplify fails → Stage 2 on unmodified diff, noted in report.
 - Calibration/wins file missing or corrupt → treat as empty, warn, never fail the run.

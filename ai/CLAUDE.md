@@ -103,6 +103,20 @@ How to work, regardless of which model is running. These encode behaviors, not v
 - After all changes, grep again and show results proving zero stale references remain
 - If renaming or moving something, the old name/path should not appear anywhere in the codebase when done
 
+## Code style
+
+Rules that keep coming back in review. They are invisible from the inside, because the author can always parse their own work, so check them explicitly rather than trusting that it reads fine.
+
+- **Comments in simple, standard English — always, without being asked.** One or two short sentences, common words, no em-dashes, no stacked clauses or dramatic phrasing. State the single non-obvious why and stop; drop supporting detail (precedents, restated consequences) rather than compressing it into dense prose. When a comment wants a third sentence, cut content, not words. Same register for docstrings: purpose first, then only the facts a caller cannot get from the signature.
+
+- **One falsey type, not two.** In a type you control, never make a field or parameter both optional and nullable (`foo?: T | null`, `T[] | null | undefined`). That forces every caller to handle `undefined` and `null` for a single absent value, and each one writes a slightly different check. Pick the one the producer actually emits: a field always present in the payload is `foo: T | null`; a field whose key can be missing is `foo?: T`. Where a generated type already models it correctly, import that rather than hand-maintaining a parallel interface — codegen derives `?` and `| null` from separate backend flags and gets it right. The pattern is widespread in older handwritten types; fix what you touch rather than sweeping.
+- **Write for a reader who wasn't there.** Applies to user-facing copy, code comments, docstrings, and PR bodies alike. Before shipping a sentence, name what the reader must already know to parse it; if any of that is only learnable from the code you just wrote, rewrite it. In copy, the leaks are internal actors and verbs ("the transport", "accepted", "enqueued") and states that exist in the data model but nowhere in the UI. In comments, it's shorthand that only resolves if you are holding the call graph in your head — name the concrete caller, field, or condition instead. Compression that costs the reader the meaning is not brevity.
+
+## Code review & simplification
+
+- Reuse an existing framework or repo component before hand-rolling a new abstraction. Policy engines, access-control filters and permission helpers almost always already exist. If a new abstraction really is needed, justify in two sentences why the existing one does not fit, and say so before writing it
+- Before claiming an API, flag or option is unsupported, or that a bug is pre-existing, verify twice by independent means: read the source, and get runtime or test evidence. State both. A confident wrong claim here has cost several rounds of rework
+
 ## Validation
 
 - After changes that touch API fields, resource names, or request/response schemas, verify the change doesn't cause validation errors (run tests or make a sample call)
@@ -115,8 +129,16 @@ How to work, regardless of which model is running. These encode behaviors, not v
 - In investigation/debugging sessions, ask "do you want me to look at the code, run queries, or both?" before diving in
 - Default to SQL queries over CLI commands for data investigations — the user prefers runnable queries over ssh + manage.py
 
+## Debugging
+
+- For "why isn't X happening in production?", gather runtime evidence first: events, logs, the actual network request and response, and every feature flag gating the path. Build theories from the code only after that. Three static-analysis theories once lost a session to a bug that was a read-only-mode flag blocking the POST
+- After restarting or toggling any local service (celery, vite, docker), confirm it is actually running before continuing. A stopped celery worker and a stale vite bundle have each produced a long false diagnosis
+
 ## Git
 
+- **Every commit must be signed** (`git commit -S`). PostHog's ruleset rejects unsigned pushes, and the posthog checkout sets `commit.gpgsign=false` locally, overriding the global `true`, so signing does not happen on its own there. Verify with `git log --show-signature -1` before pushing. Re-sign a rebased range with `git rebase --exec 'git commit --amend --no-edit -S'`
+- Never run `git rebase --rebase-merges`, or any other history-rewriting command, on a branch that contains upstream commits. A re-sign attempt with it once rewrote 282 upstream commits
+- Never `git commit --amend` or force-push without asking first
 - Never add `Co-Authored-By` lines to commit messages
 - Always open PRs as drafts (`--draft`), never ready-for-review
 - After initial PR creation, never rewrite a PR body wholesale — I edit bodies after creation (screenshots, proof-of-work notes). Fetch the current body (`gh pr view --json body`), anchor-splice the change in, and write that back. If an overwrite already clobbered my edits, recover via GraphQL `userContentEdits` (edit history keeps prior bodies with image URLs intact)
@@ -125,6 +147,12 @@ How to work, regardless of which model is running. These encode behaviors, not v
 - Committing and pushing in service of the current task is fine without an explicit ask (finishing a PR flow, addressing review comments, shipping an agreed fix). Still stop and ask before anything destructive or hard to undo: force-pushes, history rewrites of pushed branches, branch deletion, or pushing to shared/protected branches. Batch pushes (CI credits) and report what was pushed
 - **Default to Graphite (`gt`) for any branching, stacking, syncing, or PR-submit work — across all repos and terminals.** Use `gt create` over `git checkout -b`, `gt submit` over `git push`, `gt sync` over `git pull` on trunk, `gt restack` over `git rebase`, `gt log` to inspect the stack. Plain `git` is fine for read-only inspection (`status`, `diff`, `log` on a single branch) and for `git commit` itself
 - If `gt submit` fails because of stack conflicts or restack issues, **stop and ask** — don't resolve restack conflicts unilaterally, and don't fall back to `git push` without explicit approval
+
+## Worktrees
+
+- Pass absolute paths to every subagent and Bash call in a worktree session. Never rely on an inherited cwd — the shell's cwd and the worktree you mean are routinely different
+- Before the first edit or test run, `pwd && git rev-parse --show-toplevel` and confirm it matches the intended worktree. Abort loudly if it does not
+- Never remove or reinitialize a worktree another agent may still be using
 
 ## Session hygiene
 

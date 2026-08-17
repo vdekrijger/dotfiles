@@ -103,6 +103,15 @@ How to work, regardless of which model is running. These encode behaviors, not v
 - After all changes, grep again and show results proving zero stale references remain
 - If renaming or moving something, the old name/path should not appear anywhere in the codebase when done
 
+## Code style
+
+Rules that keep coming back in review. They are invisible from the inside, because the author can always parse their own work, so check them explicitly rather than trusting that it reads fine.
+
+- **Comments in simple, standard English — always, without being asked.** One or two short sentences, common words, no em-dashes, no stacked clauses or dramatic phrasing. State the single non-obvious why and stop; drop supporting detail (precedents, restated consequences) rather than compressing it into dense prose. When a comment wants a third sentence, cut content, not words. Same register for docstrings: purpose first, then only the facts a caller cannot get from the signature.
+
+- **One falsey type, not two.** In a type you control, never make a field or parameter both optional and nullable (`foo?: T | null`, `T[] | null | undefined`). That forces every caller to handle `undefined` and `null` for a single absent value, and each one writes a slightly different check. Pick the one the producer actually emits: a field always present in the payload is `foo: T | null`; a field whose key can be missing is `foo?: T`. Where a generated type already models it correctly, import that rather than hand-maintaining a parallel interface — codegen derives `?` and `| null` from separate backend flags and gets it right. The pattern is widespread in older handwritten types; fix what you touch rather than sweeping.
+- **Write for a reader who wasn't there.** Applies to user-facing copy, code comments, docstrings, and PR bodies alike. Before shipping a sentence, name what the reader must already know to parse it; if any of that is only learnable from the code you just wrote, rewrite it. In copy, the leaks are internal actors and verbs ("the transport", "accepted", "enqueued") and states that exist in the data model but nowhere in the UI. In comments, it's shorthand that only resolves if you are holding the call graph in your head — name the concrete caller, field, or condition instead. Compression that costs the reader the meaning is not brevity.
+
 ## Validation
 
 - After changes that touch API fields, resource names, or request/response schemas, verify the change doesn't cause validation errors (run tests or make a sample call)

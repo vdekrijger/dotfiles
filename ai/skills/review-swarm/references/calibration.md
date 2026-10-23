@@ -105,3 +105,10 @@ PR #62642 (vdekrijger, "feat(subscriptions): add report preview for AI prompt su
 - Finding (vasco, MEDIUM / xp, LOW): `forecastSimulationResult` splits clearSimulation into a separate reducers() entry + a loaders() entry; reviewers claimed the split is unnecessary and the collision comment is wrong, recommended collapsing into the sibling single-loader-array pattern.
   Location: frontend/src/lib/components/Alerts/alertFormLogic.ts
   Marked FP. Reason: The split is REQUIRED. kea-loaders reuses the first-registered `${action}Success` action creator across every loader keyed on the same trigger action; a second `clearSimulation` inside the loaders() block silently no-ops for the later key (payload carries the first key's value, so the reducer receives undefined). Verified empirically (merging broke the "clearSimulation resets the forecast simulation result" test) and against kea-loaders source. Generalizable rule: before flagging a reducer/loader split as redundant, check whether the two loaders share a trigger action — if so, the split is the correct workaround, not an anti-pattern.
+
+## 2026-07-13 — posthog-pulse-a3 — PR #69571 (feat(pulse): wire the agent engine)
+Recurring import-ordering false positive across two reviewers in two passes; logged so future pulse/PostHog runs don't repeat it.
+
+- Finding (code-reviewer, NIT / vasco, NIT): `import math` placed before `import asyncio` in api/brief.py "breaks alphabetical stdlib isort order (ruff I001) and will trip preflight".
+  Location: products/pulse/backend/api/brief.py:1-2
+  Marked FP. Reason: Verified empirically — `ruff check` returns "All checks passed!" and `ruff format` leaves the order unchanged. The order is canonical for this repo's ruff/isort profile; it does NOT trip preflight. Generalizable rule: before flagging Python import ORDER as a lint failure, RUN `ruff check <file>` — do not reason about isort alphabetical rules from memory. PostHog's ruff profile does not sort these two the way plain isort would. The same applies to any "this will fail the linter" claim: run the linter, don't predict it.

@@ -55,6 +55,8 @@ Use the shared working defaults to choose process proportional to the task. For 
 
 For PostHog PR completion, use `posthog-pr-finish`; for customer-flow acceptance, use `posthog-product-proof`. Keep one canonical status record for a PR stack, and avoid competing work on shared files or local services.
 
+When the session runs on the top-tier model, keep it as the coordinator: it owns design, judgment, synthesis and the final check. Hand easier work to subagents on cheaper models through the Agent tool's `model` parameter: Sonnet for mechanical tasks (running tests and linters, sweeps, lookups, simple edits), Opus for reviews, swarms and harder investigation. Brief each subagent with absolute paths and explicit read-only or write limits, and verify its report before relying on it. A handful of tool calls stays inline; a briefed subagent costs more than it saves there.
+
 ## Operating posture
 
 How to work, regardless of which model is running. These encode behaviors, not vibes — each one is checkable.

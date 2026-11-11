@@ -47,6 +47,7 @@ I work in distinct phases. Respect which phase I'm in and don't jump ahead.
 - Help generate PR title, description, and test plan
 - Follow the repo's commit/PR conventions
 - Summarize what changed and why, not just what files were touched
+- When opening a PR that changes measurable behavior (a feature, fix, performance change, or rollout), run `/pr-watch` without being asked: it authors the impact watch and adds the "Measuring impact" section. Skip it for refactors, chores, and test-only changes
 - Include a mermaid diagram in the PR description when it clarifies a non-trivial change — architecture, data or control flow, error routing, or a key decision (GitHub renders ```mermaid fenced blocks). Skip it for trivial or mechanical changes; don't force a diagram where prose is clearer
 
 ## Execution model
